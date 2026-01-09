@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(17, 24, 39) !important; /* bg-gray-900 in RGB */
+  color: rgb(255, 255, 255) !important;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  background-color: rgb(17, 24, 39) !important; /* bg-gray-900 in RGB */
+  color: rgb(255, 255, 255) !important;
+}
