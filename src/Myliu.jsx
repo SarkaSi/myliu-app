@@ -12,6 +12,7 @@ const PazintysPlatforma = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [messageInput, setMessageInput] = useState('');
+  const [messageImage, setMessageImage] = useState(null); // Nuotrauka chat žinutei
   const [credits, setCredits] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [notifications, setNotifications] = useState(3);
@@ -970,6 +971,51 @@ const PazintysPlatforma = () => {
 
   const getProfile = (id) => profiles.find(p => p.id === id);
 
+  // Funkcija nuotraukos resize'ui chat žinučių
+  const resizeImageForChat = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Maksimalus dydis chat nuotraukoms
+          const maxWidth = 800;
+          const maxHeight = 800;
+          
+          let width = img.width;
+          let height = img.height;
+          
+          // Išlaikyti aspect ratio, bet sumažinti jei per didelė
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = width * ratio;
+            height = height * ratio;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to base64 su kompresija
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        };
+        
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Funkcija, kuri skaičiuoja žinučių raundus ir patikrina, ar galima rodyti artumo poreikius
   // Raundas = žinučių seka iš vienos pusės, kuri baigiasi, kai atsako kita pusė
   // Kelios žinutės iš eilės be atsakymo = viena žinutė (vienas raundas)
@@ -1087,8 +1133,9 @@ const PazintysPlatforma = () => {
     setSelectedProfile(getProfile(profileId));
   };
 
-  const sendMessage = () => {
-    if (!messageInput.trim() || !activeChat) return;
+  const sendMessage = async () => {
+    // Tikrinti, ar yra bent tekstas arba nuotrauka
+    if ((!messageInput.trim() && !messageImage) || !activeChat) return;
     
     const conversation = conversations.find(c => c.profileId === activeChat);
     const isFirstMessage = !conversation;
@@ -1128,7 +1175,8 @@ const PazintysPlatforma = () => {
     }
 
     const newMessage = {
-      text: messageInput,
+      text: messageInput || '',
+      image: messageImage || null, // Pridedame nuotrauką
       sender: 'me',
       time: new Date().toLocaleTimeString('lt-LT', { hour: '2-digit', minute: '2-digit' }),
       read: false
@@ -1154,6 +1202,7 @@ const PazintysPlatforma = () => {
     }
 
     setMessageInput('');
+    setMessageImage(null); // Išvalyti nuotrauką po siuntimo
 
     // Scroll į apačią po siuntimo
     setTimeout(() => {
@@ -3493,21 +3542,72 @@ const PazintysPlatforma = () => {
                             ? 'bg-orange-500 text-white' 
                             : 'bg-gray-700 text-white'
                         }`}>
-                          <p className="text-sm sm:text-base">{msg.text}</p>
+                          {msg.image && (
+                            <div className="mb-2 rounded-lg overflow-hidden">
+                              <img 
+                                src={msg.image} 
+                                alt="Chat nuotrauka" 
+                                className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  setExpandedImage(msg.image);
+                                  setExpandedImageIndex(null);
+                                }}
+                              />
+                            </div>
+                          )}
+                          {msg.text && <p className="text-sm sm:text-base">{msg.text}</p>}
                           <p className="text-[10px] sm:text-xs opacity-75 mt-1">{msg.time}</p>
                         </div>
                       </div>
                     )) || <p className="text-gray-400 text-center text-sm sm:text-base">Pradėkite pokalbį!</p>}
                   </div>
+                  {messageImage && (
+                    <div className="mb-2 relative inline-block">
+                      <img 
+                        src={messageImage} 
+                        alt="Paruošta nuotrauka" 
+                        className="max-w-[200px] sm:max-w-[300px] h-auto rounded-lg border-2 border-orange-500"
+                      />
+                      <button
+                        onClick={() => setMessageImage(null)}
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      placeholder="Parašykite žinutę..."
-                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
-                    />
+                    <div className="flex flex-1 gap-2">
+                      <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-center transition-colors">
+                        <Camera size={20} className="text-gray-300" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const resizedImage = await resizeImageForChat(file);
+                                setMessageImage(resizedImage);
+                              } catch (error) {
+                                alert('Nepavyko apdoroti nuotraukos');
+                                console.error(error);
+                              }
+                            }
+                            e.target.value = ''; // Reset, kad galėtų pasirinkti tą pačią nuotrauką
+                          }}
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                        placeholder="Parašykite žinutę..."
+                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
+                      />
+                    </div>
                     <button 
                       onClick={sendMessage}
                       className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base"
