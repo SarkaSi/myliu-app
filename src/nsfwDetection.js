@@ -49,7 +49,7 @@ function analyzeRegionForNudity(data, width, height, regionTop, regionBottom, wi
   const regionHeight = regionBottom - regionTop;
   
   // Sample grid points to detect skin-colored pixels
-  const gridSize = 20; // Sample every 20 pixels
+  const gridSize = 15; // Sample every 15 pixels (more detailed sampling)
   const skinPixels = [];
   
   for (let y = regionTop; y < regionBottom; y += gridSize) {
@@ -72,10 +72,14 @@ function analyzeRegionForNudity(data, width, height, regionTop, regionBottom, wi
     }
   }
   
-  // If significant number of skin pixels found, mark region for censorship
-  const skinPixelRatio = skinPixels.length / ((regionWidth / gridSize) * (regionHeight / gridSize));
+  // Calculate total sample points
+  const totalSamples = Math.ceil(regionWidth / gridSize) * Math.ceil(regionHeight / gridSize);
   
-  if (skinPixelRatio > 0.3) { // 30% skin pixels threshold
+  // If significant number of skin pixels found, mark region for censorship
+  // Lower threshold for better detection (20% instead of 30%)
+  const skinPixelRatio = skinPixels.length / totalSamples;
+  
+  if (skinPixelRatio > 0.2 && skinPixels.length > 5) { // 20% skin pixels threshold, minimum 5 pixels
     // Calculate bounding box
     if (skinPixels.length > 0) {
       const xs = skinPixels.map(p => p.x);
@@ -88,8 +92,8 @@ function analyzeRegionForNudity(data, width, height, regionTop, regionBottom, wi
       regions.push({
         x: minX,
         y: minY,
-        width: maxX - minX,
-        height: maxY - minY,
+        width: Math.max(maxX - minX, 50), // Minimum width
+        height: Math.max(maxY - minY, 50), // Minimum height
         type: type
       });
     }
@@ -100,6 +104,7 @@ function analyzeRegionForNudity(data, width, height, regionTop, regionBottom, wi
 
 /**
  * Check if RGB color matches common skin tones
+ * Enhanced detection for better accuracy
  */
 function isSkinTone(r, g, b) {
   // Normalize to 0-1 range
@@ -112,19 +117,29 @@ function isSkinTone(r, g, b) {
   
   // Skin tones typically have:
   // - Hue: 0-50 (red-yellow range) or 340-360 (red range)
-  // - Saturation: 0.2-0.7
-  // - Value (brightness): 0.3-0.95
+  // - Saturation: 0.15-0.8 (wider range for better detection)
+  // - Value (brightness): 0.25-0.98 (wider range)
   
   const hue = h * 360;
-  const isSkinHue = (hue >= 0 && hue <= 50) || (hue >= 340 && hue <= 360);
-  const isSkinSaturation = s >= 0.2 && s <= 0.7;
-  const isSkinValue = v >= 0.3 && v <= 0.95;
+  const isSkinHue = (hue >= 0 && hue <= 55) || (hue >= 335 && hue <= 360);
+  const isSkinSaturation = s >= 0.15 && s <= 0.8;
+  const isSkinValue = v >= 0.25 && v <= 0.98;
   
-  // Additional RGB-based check for common skin colors
-  const isLightSkin = r > 95 && g > 40 && b > 20 && r > g && g > b && (r - b) > 15 && (r - g) > 15;
-  const isDarkSkin = r > 50 && g > 35 && b > 20 && r > b && g > b && (r - b) < 30;
+  // Enhanced RGB-based checks for common skin colors (more permissive)
+  const isLightSkin = r > 80 && g > 35 && b > 15 && r > g && g > b && (r - b) > 10 && (r - g) > 10;
+  const isMediumSkin = r > 70 && g > 40 && b > 20 && r > b && g > b && (r - b) < 40 && (r - g) < 30;
+  const isDarkSkin = r > 40 && g > 30 && b > 15 && r > b && g > b && (r - b) < 35 && (r - g) < 25;
   
-  return (isSkinHue && isSkinSaturation && isSkinValue) || isLightSkin || isDarkSkin;
+  // Check for pinkish/reddish tones (common in exposed skin)
+  const isPinkish = r > 100 && g > 70 && b > 70 && r > g && (r - b) < 50 && (r - g) < 50;
+  
+  // YCbCr color space check (better for skin detection)
+  const Y = 0.299 * r + 0.587 * g + 0.114 * b;
+  const Cb = -0.169 * r - 0.331 * g + 0.5 * b + 128;
+  const Cr = 0.5 * r - 0.419 * g - 0.081 * b + 128;
+  const isYCbCrSkin = Y > 80 && Cb > 85 && Cb < 135 && Cr > 135 && Cr < 180;
+  
+  return (isSkinHue && isSkinSaturation && isSkinValue) || isLightSkin || isMediumSkin || isDarkSkin || isPinkish || isYCbCrSkin;
 }
 
 /**
@@ -226,9 +241,21 @@ export async function detectAndCensorImage(imageSrc, forProfile = true) {
     return imageSrc;
   }
   
-  return new Promise((resolve, reject) => {
+  // If imageSrc is empty or invalid, return as is
+  if (!imageSrc || imageSrc === '') {
+    return imageSrc;
+  }
+  
+  return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    
+    // Handle relative paths from public folder
+    let actualSrc = imageSrc;
+    if (imageSrc.startsWith('/') && !imageSrc.startsWith('//')) {
+      // Relative path from public folder - use window.location.origin
+      actualSrc = window.location.origin + imageSrc;
+    }
     
     img.onload = async () => {
       try {
@@ -264,10 +291,37 @@ export async function detectAndCensorImage(imageSrc, forProfile = true) {
     };
     
     img.onerror = (error) => {
-      console.error('Error loading image for detection:', error);
-      // On error loading image, return original image
-      resolve(imageSrc);
+      console.error('Error loading image for detection:', error, 'Trying:', actualSrc);
+      // Try loading from relative path if absolute path failed
+      if (actualSrc !== imageSrc) {
+        const fallbackImg = new Image();
+        fallbackImg.crossOrigin = 'anonymous';
+        fallbackImg.onload = async () => {
+          try {
+            const regions = await detectNSFWRegions(fallbackImg);
+            if (regions.length === 0) {
+              resolve(imageSrc);
+              return;
+            }
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = fallbackImg.width;
+            canvas.height = fallbackImg.height;
+            ctx.drawImage(fallbackImg, 0, 0);
+            censorRegions(canvas, ctx, regions);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          } catch (e) {
+            resolve(imageSrc);
+          }
+        };
+        fallbackImg.onerror = () => resolve(imageSrc);
+        fallbackImg.src = imageSrc;
+      } else {
+        // On error loading image, return original image
+        resolve(imageSrc);
+      }
     };
-    img.src = imageSrc;
+    
+    img.src = actualSrc;
   });
 }

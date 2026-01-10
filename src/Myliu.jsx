@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
-import { stripeConfig, paymentLinks, createCheckoutSession } from './stripeConfig';
 
 const PazintysPlatforma = () => {
   const [currentView, setCurrentView] = useState('nariai');
@@ -12,7 +10,6 @@ const PazintysPlatforma = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [messageInput, setMessageInput] = useState('');
-  const [messageImage, setMessageImage] = useState(null); // Nuotrauka chat žinutei
   const [credits, setCredits] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [notifications, setNotifications] = useState(3);
@@ -24,9 +21,9 @@ const PazintysPlatforma = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [isRegistration, setIsRegistration] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPhone, setRegisterPhone] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -48,9 +45,14 @@ const PazintysPlatforma = () => {
   const [expandedImage, setExpandedImage] = useState(null);
   const [expandedImageIndex, setExpandedImageIndex] = useState(null);
   
-  // Stripe state
-  const [stripePromise, setStripePromise] = useState(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  // Tooltip states
+  const [showLifeWithoutLimitsTooltip, setShowLifeWithoutLimitsTooltip] = useState(false);
+  const [showLogoHeartTooltip, setShowLogoHeartTooltip] = useState(false);
+  const [showLikeTooltip, setShowLikeTooltip] = useState(false);
+  const [showMeetingTooltip, setShowMeetingTooltip] = useState(false);
+  const [showProfileCardLikeTooltip, setShowProfileCardLikeTooltip] = useState(null); // profileId
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, profileId: null });
+  const [tooltipStyle, setTooltipStyle] = useState({ top: 0, left: 0, transform: 'translateX(-50%)' });
   
   // Photo editor state
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
@@ -62,54 +64,6 @@ const PazintysPlatforma = () => {
     offsetY: 0,
     originalImage: null
   });
-
-  // Initialize Stripe
-  useEffect(() => {
-    if (stripeConfig.publishableKey && stripeConfig.publishableKey !== 'pk_test_your_publishable_key_here') {
-      setStripePromise(loadStripe(stripeConfig.publishableKey));
-    } else {
-      console.warn('Stripe publishable key not configured. Please set VITE_STRIPE_PUBLISHABLE_KEY in .env file');
-    }
-    
-    // Check for successful payment redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session_id');
-    const canceled = urlParams.get('canceled');
-    
-    if (sessionId) {
-      // Payment successful - handle in your backend webhook
-      // For now, we'll check session status
-      handlePaymentSuccess(sessionId);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (canceled) {
-      alert('Mokėjimas atšauktas');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  const handlePaymentSuccess = async (sessionId) => {
-    try {
-      // Verify payment with your backend
-      // For now, this is a mock implementation
-      // In production, verify the session on your backend
-      const response = await fetch(`/api/verify-session?session_id=${sessionId}`);
-      
-      if (response.ok) {
-        const { credits, success } = await response.json();
-        if (success && credits) {
-          setCredits(prevCredits => prevCredits + credits);
-          alert(`Mokėjimas sėkmingas! Gavo ${credits} žinučių.`);
-        }
-      } else {
-        // Fallback: Show success message (in production, always verify on backend)
-        alert('Mokėjimas sėkmingas! Žinutės bus pridėtos automatiškai.');
-      }
-    } catch (error) {
-      console.error('Error verifying payment:', error);
-      alert('Mokėjimas sėkmingas! Žinutės bus pridėtos automatiškai.');
-    }
-  };
 
   // PHOTO PROCESSING FUNCTION
   const processAndResizeImage = (file, cropData = null) => {
@@ -380,6 +334,69 @@ const PazintysPlatforma = () => {
       return () => clearTimeout(timer);
     }
   }, [activeChat, selectedProfile?.id]);
+
+  // Adjust tooltip position to stay within viewport boundaries
+  useEffect(() => {
+    if ((showLikeTooltip || showMeetingTooltip || showProfileCardLikeTooltip) && tooltipPosition.left > 0) {
+      if (typeof window === 'undefined') return;
+      
+      const adjustTooltipPosition = () => {
+        try {
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          const tooltipWidth = 250;
+          const padding = 8;
+          
+          let adjustedLeft = tooltipPosition.left;
+          let adjustedTop = tooltipPosition.top + 8;
+          let adjustedTransform = 'translateX(-50%)';
+          
+          // Adjust horizontal position
+          if (adjustedLeft < tooltipWidth / 2 + padding) {
+            adjustedLeft = tooltipWidth / 2 + padding;
+            adjustedTransform = 'translateX(0)';
+          } else if (adjustedLeft > viewportWidth - tooltipWidth / 2 - padding) {
+            adjustedLeft = viewportWidth - tooltipWidth / 2 - padding;
+            adjustedTransform = 'translateX(-100%)';
+          }
+          
+          // Adjust vertical position if tooltip goes beyond bottom
+          if (adjustedTop + 80 > viewportHeight - padding) {
+            adjustedTop = Math.max(padding, tooltipPosition.top - 80 - 8);
+          }
+          
+          setTooltipStyle({ 
+            top: Math.max(padding, Math.min(adjustedTop, viewportHeight - 80 - padding)), 
+            left: adjustedLeft, 
+            transform: adjustedTransform 
+          });
+        } catch (error) {
+          console.error('Error adjusting tooltip position:', error);
+          // Fallback to default position
+          setTooltipStyle({ 
+            top: tooltipPosition.top + 8, 
+            left: tooltipPosition.left, 
+            transform: 'translateX(-50%)' 
+          });
+        }
+      };
+      
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(adjustTooltipPosition);
+      
+      const handleResize = () => {
+        requestAnimationFrame(adjustTooltipPosition);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    } else {
+      // Reset tooltip style when tooltips are hidden
+      setTooltipStyle({ top: 0, left: 0, transform: 'translateX(-50%)' });
+    }
+  }, [tooltipPosition, showLikeTooltip, showMeetingTooltip, showProfileCardLikeTooltip]);
 
   useEffect(() => {
     setRegistrationData({
@@ -971,81 +988,6 @@ const PazintysPlatforma = () => {
 
   const getProfile = (id) => profiles.find(p => p.id === id);
 
-  // Funkcija nuotraukos resize'ui chat žinučių
-  const resizeImageForChat = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        const img = new Image();
-        
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Maksimalus dydis chat nuotraukoms
-          const maxWidth = 800;
-          const maxHeight = 800;
-          
-          let width = img.width;
-          let height = img.height;
-          
-          // Išlaikyti aspect ratio, bet sumažinti jei per didelė
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = width * ratio;
-            height = height * ratio;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Convert to base64 su kompresija
-          const base64 = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(base64);
-        };
-        
-        img.onerror = reject;
-        img.src = e.target.result;
-      };
-      
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Funkcija, kuri skaičiuoja žinučių raundus ir patikrina, ar galima rodyti artumo poreikius
-  // Raundas = žinučių seka iš vienos pusės, kuri baigiasi, kai atsako kita pusė
-  // Kelios žinutės iš eilės be atsakymo = viena žinutė (vienas raundas)
-  const canShowEroticInterests = (profileId) => {
-    const conversation = conversations.find(c => c.profileId === profileId);
-    if (!conversation || !conversation.messages || conversation.messages.length === 0) {
-      return false;
-    }
-
-    let myRounds = 0;
-    let theirRounds = 0;
-    let lastSender = null;
-
-    conversation.messages.forEach((msg) => {
-      // Jei siuntėjas pakeitėsi, tai tai yra naujas raundas
-      // Jei siuntėjas toks pats, tai tai yra ta pati žinutės seka (skaičiuojama kaip vienas raundas)
-      if (msg.sender !== lastSender) {
-        if (msg.sender === 'me') {
-          myRounds++;
-        } else if (msg.sender === 'them') {
-          theirRounds++;
-        }
-        lastSender = msg.sender;
-      }
-    });
-
-    // Grąžiname true tik jei yra bent 3 raundai iš kiekvienos pusės
-    return myRounds >= 3 && theirRounds >= 3;
-  };
-
   const toggleStatus = (profileId, statusType) => {
     setProfiles(prevProfiles => prevProfiles.map(p => {
       if (p.id === profileId) {
@@ -1133,9 +1075,15 @@ const PazintysPlatforma = () => {
     setSelectedProfile(getProfile(profileId));
   };
 
-  const sendMessage = async () => {
-    // Tikrinti, ar yra bent tekstas arba nuotrauka
-    if ((!messageInput.trim() && !messageImage) || !activeChat) return;
+  const sendMessage = () => {
+    // Tikrinti, ar vartotojas prisijungęs
+    if (!isLoggedIn) {
+      alert('Prašome prisijungti, kad galėtumėte siųsti žinutes.');
+      setShowLoginModal(true);
+      return;
+    }
+    
+    if (!messageInput.trim() || !activeChat) return;
     
     const conversation = conversations.find(c => c.profileId === activeChat);
     const isFirstMessage = !conversation;
@@ -1175,8 +1123,7 @@ const PazintysPlatforma = () => {
     }
 
     const newMessage = {
-      text: messageInput || '',
-      image: messageImage || null, // Pridedame nuotrauką
+      text: messageInput,
       sender: 'me',
       time: new Date().toLocaleTimeString('lt-LT', { hour: '2-digit', minute: '2-digit' }),
       read: false
@@ -1202,7 +1149,6 @@ const PazintysPlatforma = () => {
     }
 
     setMessageInput('');
-    setMessageImage(null); // Išvalyti nuotrauką po siuntimo
 
     // Scroll į apačią po siuntimo
     setTimeout(() => {
@@ -1249,63 +1195,10 @@ const PazintysPlatforma = () => {
     }, 2000);
   };
 
-  const buyCredits = async (creditsAmount, priceEur) => {
-    setIsProcessingPayment(true);
-    
-    try {
-      // Determine which pack was selected
-      const packType = creditsAmount === 100 ? 'pack100' : 'pack1000';
-      const packConfig = stripeConfig.products[packType];
-      
-      // Check if Payment Links are configured (simpler, no backend required)
-      if (paymentLinks[packType] && paymentLinks[packType] !== `https://buy.stripe.com/your_${creditsAmount}_messages_link`) {
-        // Use Payment Links (no backend required)
-        window.location.href = paymentLinks[packType];
-        return;
-      }
-      
-      // Otherwise, use Checkout Session (requires backend)
-      if (stripePromise && packConfig.priceId && packConfig.priceId !== `price_your_${creditsAmount}_messages_price_id_here`) {
-        const stripe = await stripePromise;
-        
-        try {
-          // Create Checkout Session via backend
-          const sessionId = await createCheckoutSession(packConfig.priceId, creditsAmount);
-          
-          // Redirect to Stripe Checkout
-          const { error } = await stripe.redirectToCheckout({
-            sessionId: sessionId,
-          });
-          
-          if (error) {
-            throw error;
-          }
-        } catch (error) {
-          console.error('Stripe Checkout error:', error);
-          
-          // Fallback to Payment Link if available
-          if (paymentLinks[packType]) {
-            window.location.href = paymentLinks[packType];
-            return;
-          }
-          
-          // If both methods fail, show development mode message
-          throw new Error('Stripe nekonfigūruotas. Prašome nustatyti Stripe raktus arba Payment Links.');
-        }
-      } else {
-        // Development mode - simulate payment
-        if (confirm(`Simuliacija: Nusipirkti ${creditsAmount} žinučių už ${priceEur}€?`)) {
-          setCredits(prevCredits => prevCredits + creditsAmount);
-          setShowPayment(false);
-          alert(`Sėkmingai nusipirkote ${creditsAmount} žinučių už ${priceEur}€!`);
-        }
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert(`Klaida: ${error.message || 'Nepavyko pradėti mokėjimo. Prašome patikrinti Stripe konfigūraciją.'}`);
-    } finally {
-      setIsProcessingPayment(false);
-    }
+  const buyCredits = (amount, price) => {
+    setCredits(prevCredits => prevCredits + amount);
+    setShowPayment(false);
+    alert(`Sėkmingai nusipirkote ${amount} žinučių už ${price}€!`);
   };
 
   const isEmail = (str) => {
@@ -1317,13 +1210,7 @@ const PazintysPlatforma = () => {
   };
 
   const handleRegister = () => {
-    // Patikrinti vardą
-    if (!registerName.trim()) {
-      alert('Prašome įvesti vardą');
-      return;
-    }
-
-    // Patikrinti, ar bent vienas laukas užpildytas (el. paštas arba telefonas)
+    // Patikrinti, ar bent vienas laukas užpildytas
     if (!registerEmail.trim() && !registerPhone.trim()) {
       alert('Prašome užpildyti bent vieną: el. paštą arba telefono numerį');
       return;
@@ -1386,7 +1273,6 @@ const PazintysPlatforma = () => {
     if (verificationCode.length === 6) {
       alert('Registracija sėkminga! Dabar galite prisijungti.');
       setShowVerification(false);
-      setRegisterName('');
       setRegisterEmail('');
       setRegisterPhone('');
       setRegisterPassword('');
@@ -1410,7 +1296,8 @@ const PazintysPlatforma = () => {
       return;
     }
 
-    // Simuliuoti prisijungimą
+    // Prisijungti
+    setIsLoggedIn(true);
     alert('Prisijungimas sėkmingas!');
     setShowLoginModal(false);
     setLoginEmailOrPhone('');
@@ -1531,23 +1418,53 @@ const PazintysPlatforma = () => {
             </svg>
             {profile.status.watching ? 'Stebiu' : 'Stebėti'}
           </button>
-          <button 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              toggleStatus(profile.id, 'liked');
-            }}
-            className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
-              profile.status.liked
-                ? 'text-white'
-                : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
-            }`}
-            style={profile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={profile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
-            </svg>
-            {profile.status.liked ? 'Myliu' : 'Mylėti'}
-          </button>
+          <div className="relative flex-1">
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                toggleStatus(profile.id, 'liked');
+              }}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: profile.id });
+                setShowProfileCardLikeTooltip(profile.id);
+              }}
+              onMouseLeave={() => setShowProfileCardLikeTooltip(null)}
+              className={`w-full px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
+                profile.status.liked
+                  ? 'text-white'
+                  : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
+              }`}
+              style={profile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={profile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
+              </svg>
+              {profile.status.liked ? 'Myliu' : 'Mylėti'}
+            </button>
+            {showProfileCardLikeTooltip === profile.id && tooltipPosition && tooltipPosition.profileId === profile.id && tooltipPosition.left > 0 && (
+              <div 
+                className="fixed bg-gray-800 border-2 border-orange-500 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
+                style={{
+                  top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
+                  left: `${tooltipStyle?.left || tooltipPosition.left}px`,
+                  transform: tooltipStyle?.transform || 'translateX(-50%)',
+                  maxWidth: 'calc(100vw - 1rem)',
+                  width: 'max-content',
+                  minWidth: '100px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  maxHeight: 'calc(100vh - 1rem)',
+                  overflowY: 'auto'
+                }}
+              >
+                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-orange-500"></div>
+                <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words">
+                  {profile.status?.liked ? 'Pašalinti iš mylimų' : 'Pridėti prie mylimų'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1638,11 +1555,15 @@ const PazintysPlatforma = () => {
                 <span className="sm:hidden">R</span>
               </button>
               <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-1.5 sm:px-4 py-1 sm:py-2.5 bg-gray-700 hover:bg-gray-600 text-[10px] sm:text-base font-medium rounded-lg border-2 border-orange-500 transition-colors"
+                onClick={() => isLoggedIn ? setIsLoggedIn(false) : setShowLoginModal(true)}
+                className={`px-1.5 sm:px-4 py-1 sm:py-2.5 text-[10px] sm:text-base font-medium rounded-lg border-2 border-orange-500 transition-colors ${
+                  isLoggedIn 
+                    ? 'bg-orange-300 hover:bg-orange-400 text-gray-900' 
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
               >
-                <span className="hidden sm:inline">Pri</span>
-                <span className="sm:hidden">P</span>
+                <span className="hidden sm:inline">{isLoggedIn ? 'Atsijungti' : 'Pri'}</span>
+                <span className="sm:hidden">{isLoggedIn ? 'A' : 'P'}</span>
               </button>
             </div>
           </div>
@@ -1876,7 +1797,7 @@ const PazintysPlatforma = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Artumo poreikiai</label>
+                      <label className="block text-sm font-medium mb-2">Erotiškumas</label>
                       <select 
                         value={filters.eroticInterest}
                         onChange={(e) => setFilters({...filters, eroticInterest: e.target.value})}
@@ -2030,6 +1951,13 @@ const PazintysPlatforma = () => {
                           <ProfileCard 
                             profile={profile}
                             onClick={() => {
+                              // Patikrinti, ar profilis užpildytas
+                              if (!profileComplete) {
+                                alert('Prašome pirmiausia užpildyti savo profilį. Be užpildytos anketos negalite atidaryti pokalbių.');
+                                setShowProfileForm(true);
+                                return;
+                              }
+                              
                               setActiveChat(conv.profileId);
                               setSelectedProfile(profile);
                               setShowUnreadOnly(false);
@@ -2260,7 +2188,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                     </div>
-                    <div className="sm:col-span-2">
+                    <div>
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                       <input 
@@ -2308,13 +2236,13 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
                         onChange={(e) => setRegistrationData({...registrationData, height: e.target.value})}
                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base"
-                        placeholder="Pvz., 175 cm"
+                        placeholder="Pvz., 175"
                         min="100"
                         max="250"
                       />
@@ -2525,9 +2453,9 @@ const PazintysPlatforma = () => {
                   </button>
                 </div>
 
-                {/* Artumo poreikiai */}
+                {/* Mano erotiniai pomėgiai */}
                     <div>
-                  <h3 className="text-xl font-bold mb-4">Artumo poreikiai *</h3>
+                  <h3 className="text-xl font-bold mb-4">Mano erotiniai pomėgiai *</h3>
                   <div className="flex flex-wrap gap-2">
                     {['Pasimatymai', 'Bučiavimasis', 'Glamonės', 'Erotinis masažas', 'Virtualus seksas', 'Tantrinis seksas', 'Saugus seksas', '69', 'Oralinis seksas', 'Viešas seksas', 'Analinis saksas', 'SM', 'BDSM', 'Grupinis seksas', 'Keitimasis partneriais', 'Vergavimas', 'Kita (Įrašyti)'].map((interest) => (
                       <button
@@ -2571,7 +2499,7 @@ const PazintysPlatforma = () => {
                             setCustomEroticText(e.target.value);
                           }
                         }}
-                        placeholder="Įrašykite artumo poreikį (iki 20 simbolių)"
+                        placeholder="Įrašykite erotinį pomėgį (iki 20 simbolių)"
                         className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
                         maxLength={20}
                       />
@@ -2605,7 +2533,7 @@ const PazintysPlatforma = () => {
                   <button
                     onClick={() => {
                       if (registrationData.eroticInterests.length === 0) {
-                        alert('Būtina pasirinkti bent vieną artumo poreikį');
+                        alert('Būtina pasirinkti bent vieną erotinį pomėgį');
                         return;
                       }
                       alert('Pakeitimai išsaugoti');
@@ -2739,7 +2667,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                   </div>
-                    <div className="sm:col-span-2">
+                    <div>
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                         <input 
@@ -2795,7 +2723,7 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
@@ -2804,7 +2732,7 @@ const PazintysPlatforma = () => {
                           setUserProfile({...userProfile, height: e.target.value});
                         }}
                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base"
-                        placeholder="Pvz., 175 cm"
+                        placeholder="Pvz., 175"
                         min="100"
                         max="250"
                       />
@@ -3023,9 +2951,9 @@ const PazintysPlatforma = () => {
                   </button>
                 </div>
 
-                {/* Artumo poreikiai */}
-                    <div>
-                  <h3 className="text-xl font-bold mb-4">Artumo poreikiai *</h3>
+                {/* Mano erotiniai pomėgiai */}
+                <div>
+                  <h3 className="text-xl font-bold mb-4">Mano erotiniai pomėgiai *</h3>
                   <div className="flex flex-wrap gap-2">
                     {['Pasimatymai', 'Bučiavimasis', 'Glamonės', 'Erotinis masažas', 'Virtualus seksas', 'Tantrinis seksas', 'Saugus seksas', '69', 'Oralinis seksas', 'Viešas seksas', 'Analinis saksas', 'SM', 'BDSM', 'Grupinis seksas', 'Keitimasis partneriais', 'Vergavimas', 'Kita (Įrašyti)'].map((interest) => (
                       <button
@@ -3063,7 +2991,7 @@ const PazintysPlatforma = () => {
                             setCustomEroticText(e.target.value);
                           }
                         }}
-                        placeholder="Įrašykite artumo poreikį (iki 20 simbolių)"
+                        placeholder="Įrašykite erotinį pomėgį (iki 20 simbolių)"
                         className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
                         maxLength={20}
                       />
@@ -3096,7 +3024,7 @@ const PazintysPlatforma = () => {
                   <button
                     onClick={() => {
                       if (registrationData.eroticInterests.length === 0) {
-                        alert('Būtina pasirinkti bent vieną artumo poreikį');
+                        alert('Būtina pasirinkti bent vieną erotinį pomėgį');
                         return;
                       }
                       alert('Pakeitimai išsaugoti');
@@ -3387,22 +3315,60 @@ const PazintysPlatforma = () => {
                   </svg>
                   {selectedProfile.status.watching ? 'Stebiu' : 'Stebėti'}
                 </button>
-                <button 
-                  onClick={() => toggleStatus(selectedProfile.id, 'liked')}
-                  className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
-                    selectedProfile.status.liked
-                      ? 'text-white'
-                      : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
-                  }`}
-                  style={selectedProfile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={selectedProfile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
-                  </svg>
-                  {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
-                </button>
+                <div className="relative flex-1">
+                  <button 
+                    onClick={() => toggleStatus(selectedProfile.id, 'liked')}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: null });
+                      setShowLikeTooltip(true);
+                    }}
+                    onMouseLeave={() => setShowLikeTooltip(false)}
+                    className={`w-full px-6 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
+                      selectedProfile.status.liked
+                        ? 'text-white'
+                        : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
+                    }`}
+                    style={selectedProfile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={selectedProfile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
+                    </svg>
+                    {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
+                  </button>
+                  {showLikeTooltip && tooltipPosition && tooltipPosition.left > 0 && selectedProfile && (
+                    <div 
+                      className="fixed bg-gray-800 border-2 border-orange-500 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
+                      style={{
+                        top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
+                        left: `${tooltipStyle?.left || tooltipPosition.left}px`,
+                        transform: tooltipStyle?.transform || 'translateX(-50%)',
+                        maxWidth: 'calc(100vw - 1rem)',
+                        width: 'max-content',
+                        minWidth: '120px',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxHeight: 'calc(100vh - 1rem)',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-orange-500"></div>
+                      <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words">
+                        {selectedProfile.status?.liked ? 'Pašalinti iš mylimų' : 'Pridėti prie mylimų'}
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <button 
                   onClick={() => {
+                    // Patikrinti, ar profilis užpildytas
+                    if (!profileComplete) {
+                      alert('Prašome pirmiausia užpildyti savo profilį. Be užpildytos anketos negalite rašyti žinučių.');
+                      setShowProfileForm(true);
+                      setSelectedProfile(null); // Uždaryti profilio modalą
+                      return;
+                    }
+                    
                     setActiveChat(selectedProfile.id);
                     const existingConv = conversations.find(c => c.profileId === selectedProfile.id);
                     if (!existingConv) {
@@ -3427,17 +3393,49 @@ const PazintysPlatforma = () => {
                 </button>
               </div>
 
-              {/* Sexforespørsel Button */}
-              <button 
-                onClick={() => proposeMeeting(selectedProfile.id)}
-                className="w-full text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium mb-6 transition-colors"
-                style={{ backgroundColor: 'rgb(182, 14, 27)' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgb(200, 20, 35)'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgb(182, 14, 27)'}
-              >
-                <Heart size={20} fill="currentColor" />
-                Pasiūlyti susitikimą
-              </button>
+              {/* Susitikimo pasiūlymo Button */}
+              <div className="relative mb-6">
+                <button 
+                  onClick={() => proposeMeeting(selectedProfile.id)}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = 'rgb(200, 20, 35)';
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: null });
+                    setShowMeetingTooltip(true);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'rgb(182, 14, 27)';
+                    setShowMeetingTooltip(false);
+                  }}
+                  className="w-full text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
+                  style={{ backgroundColor: 'rgb(182, 14, 27)' }}
+                >
+                  <Heart size={20} fill="currentColor" />
+                  Pasiūlyti susitikimą
+                </button>
+                {showMeetingTooltip && tooltipPosition && tooltipPosition.left > 0 && (
+                  <div 
+                    className="fixed bg-gray-800 border-2 border-red-600 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
+                    style={{
+                      top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
+                      left: `${tooltipStyle?.left || tooltipPosition.left}px`,
+                      transform: tooltipStyle?.transform || 'translateX(-50%)',
+                      maxWidth: 'calc(100vw - 1rem)',
+                      width: 'max-content',
+                      minWidth: '180px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      maxHeight: 'calc(100vh - 1rem)',
+                      overflowY: 'auto'
+                    }}
+                  >
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-red-600"></div>
+                    <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words px-1">
+                      Siųsti rožių puokštę ir pasiūlyti susitikimą (100 kreditų)
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* About */}
               <div className="mb-4 sm:mb-6">
@@ -3516,10 +3514,10 @@ const PazintysPlatforma = () => {
                 </div>
               </div>
 
-              {/* Erotic Interests - rodomi tik po 3 žinučių iš kiekvienos pusės */}
-              {selectedProfile.eroticInterests && selectedProfile.eroticInterests.length > 0 && canShowEroticInterests(selectedProfile.id) && (
+              {/* Erotic Interests */}
+              {selectedProfile.eroticInterests && selectedProfile.eroticInterests.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold mb-3">Artumo poreikiai</h3>
+                  <h3 className="text-xl font-bold mb-3">Mano erotiniai pomėgiai</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedProfile.eroticInterests.map((interest, idx) => (
                       <span key={idx} className="bg-purple-600 text-white px-4 py-2 rounded-full">
@@ -3542,72 +3540,21 @@ const PazintysPlatforma = () => {
                             ? 'bg-orange-500 text-white' 
                             : 'bg-gray-700 text-white'
                         }`}>
-                          {msg.image && (
-                            <div className="mb-2 rounded-lg overflow-hidden">
-                              <img 
-                                src={msg.image} 
-                                alt="Chat nuotrauka" 
-                                className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => {
-                                  setExpandedImage(msg.image);
-                                  setExpandedImageIndex(null);
-                                }}
-                              />
-                            </div>
-                          )}
-                          {msg.text && <p className="text-sm sm:text-base">{msg.text}</p>}
+                          <p className="text-sm sm:text-base">{msg.text}</p>
                           <p className="text-[10px] sm:text-xs opacity-75 mt-1">{msg.time}</p>
                         </div>
                       </div>
                     )) || <p className="text-gray-400 text-center text-sm sm:text-base">Pradėkite pokalbį!</p>}
                   </div>
-                  {messageImage && (
-                    <div className="mb-2 relative inline-block">
-                      <img 
-                        src={messageImage} 
-                        alt="Paruošta nuotrauka" 
-                        className="max-w-[200px] sm:max-w-[300px] h-auto rounded-lg border-2 border-orange-500"
-                      />
-                      <button
-                        onClick={() => setMessageImage(null)}
-                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex flex-1 gap-2">
-                      <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-center transition-colors">
-                        <Camera size={20} className="text-gray-300" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              try {
-                                const resizedImage = await resizeImageForChat(file);
-                                setMessageImage(resizedImage);
-                              } catch (error) {
-                                alert('Nepavyko apdoroti nuotraukos');
-                                console.error(error);
-                              }
-                            }
-                            e.target.value = ''; // Reset, kad galėtų pasirinkti tą pačią nuotrauką
-                          }}
-                        />
-                      </label>
-                      <input
-                        type="text"
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                        placeholder="Parašykite žinutę..."
-                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      placeholder="Parašykite žinutę..."
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
+                    />
                     <button 
                       onClick={sendMessage}
                       className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base"
@@ -3669,17 +3616,7 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Vardas <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  value={registerName}
-                  onChange={(e) => setRegisterName(e.target.value)}
-                  placeholder="Įveskite savo vardą"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-gray-400">(pasirinktinai, jei nėra telefono)</span></label>
+                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-gray-400">(nebūtinas)</span></label>
                 <input
                   type="email"
                   value={registerEmail}
@@ -3689,7 +3626,7 @@ const PazintysPlatforma = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(pasirinktinai, jei nėra el. pašto)</span></label>
+                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(nebūtinas)</span></label>
                 <input
                   type="tel"
                   value={registerPhone}
@@ -3697,7 +3634,6 @@ const PazintysPlatforma = () => {
                   placeholder="pvz: +37061234567"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
-                <p className="text-xs text-gray-400 mt-1">Prašome užpildyti bent vieną: el. paštą arba telefono numerį</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Slaptažodis</label>
@@ -3838,12 +3774,8 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div 
-                onClick={() => !isProcessingPayment && buyCredits(100, 1)}
-                className={`bg-gray-700 rounded-lg p-4 sm:p-6 border-2 border-transparent transition-all ${
-                  isProcessingPayment 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:bg-gray-600 hover:border-orange-500 cursor-pointer'
-                }`}
+                onClick={() => buyCredits(100, 1)}
+                className="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 sm:p-6 cursor-pointer border-2 border-transparent hover:border-orange-500 transition-all"
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-lg sm:text-2xl font-bold">100 žinučių</span>
@@ -3853,12 +3785,8 @@ const PazintysPlatforma = () => {
               </div>
 
               <div 
-                onClick={() => !isProcessingPayment && buyCredits(1000, 7)}
-                className={`bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-4 sm:p-6 border-2 border-transparent transition-all relative overflow-hidden ${
-                  isProcessingPayment 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:from-orange-600 hover:to-red-600 hover:border-white cursor-pointer'
-                }`}
+                onClick={() => buyCredits(1000, 7)}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-lg p-4 sm:p-6 cursor-pointer border-2 border-transparent hover:border-white transition-all relative overflow-hidden"
               >
                 <div className="absolute top-2 right-2 bg-yellow-400 text-black px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                   POPULIARIAUSIAS
@@ -3870,12 +3798,6 @@ const PazintysPlatforma = () => {
                 <p className="text-white/80 text-xs sm:text-sm">0.007€ už žinutę • Sutaupote 30%</p>
               </div>
             </div>
-            
-            {isProcessingPayment && (
-              <div className="mt-4 text-center text-sm text-orange-500">
-                Peradresuojama į Stripe mokėjimo puslapį...
-              </div>
-            )}
 
             <div className="mt-4 sm:mt-6 flex items-center gap-2 text-xs sm:text-sm text-gray-400">
               <Shield size={14} className="sm:w-4 sm:h-4" />
