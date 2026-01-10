@@ -970,6 +970,36 @@ const PazintysPlatforma = () => {
 
   const getProfile = (id) => profiles.find(p => p.id === id);
 
+  // Funkcija, kuri skaičiuoja žinučių raundus ir patikrina, ar galima rodyti artumo poreikius
+  // Raundas = žinučių seka iš vienos pusės, kuri baigiasi, kai atsako kita pusė
+  // Kelios žinutės iš eilės be atsakymo = viena žinutė (vienas raundas)
+  const canShowEroticInterests = (profileId) => {
+    const conversation = conversations.find(c => c.profileId === profileId);
+    if (!conversation || !conversation.messages || conversation.messages.length === 0) {
+      return false;
+    }
+
+    let myRounds = 0;
+    let theirRounds = 0;
+    let lastSender = null;
+
+    conversation.messages.forEach((msg) => {
+      // Jei siuntėjas pakeitėsi, tai tai yra naujas raundas
+      // Jei siuntėjas toks pats, tai tai yra ta pati žinutės seka (skaičiuojama kaip vienas raundas)
+      if (msg.sender !== lastSender) {
+        if (msg.sender === 'me') {
+          myRounds++;
+        } else if (msg.sender === 'them') {
+          theirRounds++;
+        }
+        lastSender = msg.sender;
+      }
+    });
+
+    // Grąžiname true tik jei yra bent 3 raundai iš kiekvienos pusės
+    return myRounds >= 3 && theirRounds >= 3;
+  };
+
   const toggleStatus = (profileId, statusType) => {
     setProfiles(prevProfiles => prevProfiles.map(p => {
       if (p.id === profileId) {
@@ -3437,8 +3467,8 @@ const PazintysPlatforma = () => {
                 </div>
               </div>
 
-              {/* Erotic Interests */}
-              {selectedProfile.eroticInterests && selectedProfile.eroticInterests.length > 0 && (
+              {/* Erotic Interests - rodomi tik po 3 žinučių iš kiekvienos pusės */}
+              {selectedProfile.eroticInterests && selectedProfile.eroticInterests.length > 0 && canShowEroticInterests(selectedProfile.id) && (
                 <div className="mb-6">
                   <h3 className="text-xl font-bold mb-3">Artumo poreikiai</h3>
                   <div className="flex flex-wrap gap-2">
