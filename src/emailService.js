@@ -8,7 +8,7 @@ export const emailJSConfig = {
   serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'your_service_id', // Replace with your EmailJS service ID
   templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'your_template_id', // Replace with your EmailJS template ID
   publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key', // Replace with your EmailJS public key
-  fromEmail: 'nsaru378@gmail.com', // Email from which verification emails are sent
+  fromEmail: 'myliu67x@outlook.com', // Email from which verification emails are sent
   enabled: import.meta.env.VITE_EMAILJS_ENABLED === 'true' || false // Set to true after configuring EmailJS
 };
 
@@ -35,8 +35,8 @@ export const sendEmailViaEmailJS = async (toEmail, verificationCode, userName) =
       to_name: userName,
       verification_code: verificationCode,
       from_name: 'Six ❤ Seven',
-      from_email: 'nsaru378@gmail.com',
-      reply_to: 'nsaru378@gmail.com',
+      from_email: 'myliu67x@outlook.com',
+      reply_to: 'myliu67x@outlook.com',
       subject: 'Patvirtinimo kodas - Six ❤ Seven'
     };
 

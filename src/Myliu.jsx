@@ -1363,7 +1363,7 @@ const PazintysPlatforma = () => {
           
           if (result.success && !result.mock) {
             // Tikras email išsiųstas sėkmingai
-            console.log(`✅ Email sėkmingai išsiųstas į ${registerEmail} iš nsaru378@gmail.com`);
+            console.log(`✅ Email sėkmingai išsiųstas į ${registerEmail} iš myliu67x@outlook.com`);
           } else if (result.mock) {
             // Mock mode - development režimas
             console.log(`⚠️ Email siuntimas mock režime. Kodas: ${code}`);

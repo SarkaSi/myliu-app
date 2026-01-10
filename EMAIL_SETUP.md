@@ -18,14 +18,14 @@ EmailJS leidžia siųsti email'us tiesiogiai iš frontend be backend serverio.
 2. Sukurkite nemokamą paskyrą
 3. Patvirtinkite email
 
-#### 2. Sukonfigūruokite Email Service su nsaru378@gmail.com
+#### 2. Sukonfigūruokite Email Service su myliu67x@outlook.com
 
 1. Eikite į [Email Services](https://dashboard.emailjs.com/admin/integration)
 2. Pridėkite **Gmail Service** arba **Custom SMTP Service**
-3. Konfigūruokite su `nsaru378@gmail.com`:
+3. Konfigūruokite su `myliu67x@outlook.com`:
 
 **Gmail Service:**
-- Prisijunkite su `nsaru378@gmail.com` paskyra
+- Prisijunkite su `myliu67x@outlook.com` paskyra
 - Patvirtinkite prieigą
 - Service ID bus automatiškai sukurtas
 
@@ -33,7 +33,7 @@ EmailJS leidžia siųsti email'us tiesiogiai iš frontend be backend serverio.
 - Service Type: SMTP
 - SMTP Server: `smtp.gmail.com`
 - SMTP Port: `587` (TLS) arba `465` (SSL)
-- SMTP Username: `nsaru378@gmail.com`
+- SMTP Username: `myliu67x@outlook.com`
 - SMTP Password: [Gmail App Password - žr. žemiau]
 
 **Gmail App Password sukūrimas:**
@@ -47,12 +47,12 @@ EmailJS leidžia siųsti email'us tiesiogiai iš frontend be backend serverio.
 
 1. Eikite į [Email Services](https://dashboard.emailjs.com/admin/integration)
 2. Pridėkite Gmail Service arba Custom SMTP Service
-3. Konfigūruokite su `nsaru378@gmail.com`:
-   - **Gmail Service**: Prisijunkite su `nsaru378@gmail.com` paskyra
+3. Konfigūruokite su `myliu67x@outlook.com`:
+   - **Gmail Service**: Prisijunkite su `myliu67x@outlook.com` paskyra
    - **Custom SMTP**: Naudokite Gmail SMTP nustatymus:
      - Host: `smtp.gmail.com`
      - Port: `587`
-     - User: `nsaru378@gmail.com`
+     - User: `myliu67x@outlook.com`
      - Password: [Gmail App Password - sukurkite Google Account Security]
 
 #### 4. Sukurkite Email Template
@@ -82,8 +82,8 @@ Six ❤ Seven komanda
 **Template Variables (reikalingi):**
 - `{{to_name}}` - gavėjo vardas
 - `{{verification_code}}` - patvirtinimo kodas
-- `{{from_email}}` - siuntimo email (nsaru378@gmail.com)
-- `{{reply_to}}` - atsakymo email (nsaru378@gmail.com)
+- `{{from_email}}` - siuntimo email (myliu67x@outlook.com)
+- `{{reply_to}}` - atsakymo email (myliu67x@outlook.com)
 
 3. Nukopijuokite Template ID
 
@@ -120,14 +120,14 @@ VITE_EMAILJS_ENABLED=true
 
 `src/emailService.js` jau konfigūruotas automatiškai skaityti iš `.env` failo. Tiesiog sukurkite `.env` failą su jūsų EmailJS duomenimis.
 
-**Email siunčiamas iš:** `nsaru378@gmail.com` (nustatyta automatiškai `emailService.js` faile)
+**Email siunčiamas iš:** `myliu67x@outlook.com` (nustatyta automatiškai `emailService.js` faile)
 
 **Template parametrai, kurie naudojami:**
 - `to_email` - gavėjo email adresas
 - `to_name` - gavėjo vardas (arba email dalis prieš @)
 - `verification_code` - 6 skaitmenų patvirtinimo kodas
-- `from_email` - siuntimo email (`nsaru378@gmail.com`)
-- `reply_to` - atsakymo email (`nsaru378@gmail.com`)
+- `from_email` - siuntimo email (`myliu67x@outlook.com`)
+- `reply_to` - atsakymo email (`myliu67x@outlook.com`)
 
 ### Metodas 2: Backend API Endpoint (Production)
 
@@ -260,7 +260,7 @@ Patvirtinimo kodas - Six ❤ Seven
       <p>Jei jūs nebandėte registruotis Six ❤ Seven platformoje, prašome ignoruoti šį laišką.</p>
       <div class="footer">
         <p>Pagarbiai,<br>Six ❤ Seven komanda</p>
-        <p>Siunčiama iš: nsaru378@gmail.com</p>
+        <p>Siunčiama iš: myliu67x@outlook.com</p>
       </div>
     </div>
   </div>
@@ -268,8 +268,8 @@ Patvirtinimo kodas - Six ❤ Seven
 </html>
 ```
 
-**SVARBU:** Email siunčiamas iš `nsaru378@gmail.com`. Įsitikinkite, kad:
-1. Gmail Service nustatytas su `nsaru378@gmail.com` paskyra
+**SVARBU:** Email siunčiamas iš `myliu67x@outlook.com`. Įsitikinkite, kad:
+1. Gmail Service nustatytas su `myliu67x@outlook.com` paskyra
 2. Naudojate Gmail App Password (ne įprastą slaptažodį)
 3. Template naudoja `{{from_email}}` ir `{{reply_to}}` parametrus
 
