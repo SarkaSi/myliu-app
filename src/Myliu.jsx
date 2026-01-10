@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { sendVerificationEmail } from './emailService';
 
 const PazintysPlatforma = () => {
   const [currentView, setCurrentView] = useState('nariai');
@@ -31,8 +32,10 @@ const PazintysPlatforma = () => {
   const [loginEmailOrPhone, setLoginEmailOrPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [storedVerificationCode, setStoredVerificationCode] = useState(null); // Store the generated code for verification
   const [showVerification, setShowVerification] = useState(false);
   const [verificationSentTo, setVerificationSentTo] = useState([]); // Array of 'email' and/or 'phone'
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [showChangePhoneModal, setShowChangePhoneModal] = useState(false);
   const [changePhoneInput, setChangePhoneInput] = useState('');
   const [changePhonePassword, setChangePhonePassword] = useState('');
@@ -51,6 +54,7 @@ const PazintysPlatforma = () => {
   const [showMeetingTooltip, setShowMeetingTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, profileId: null });
   const [tooltipStyle, setTooltipStyle] = useState({ top: 0, left: 0, transform: 'translateX(-50%)' });
+  const [savedSections, setSavedSections] = useState(new Set()); // Seka, kurios sekcijos išsaugotos
   
   // Photo editor state
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
@@ -891,6 +895,39 @@ const PazintysPlatforma = () => {
       status: { watching: false, liked: false, likedMe: false }
     },
     {
+      id: 15,
+      name: 'Domantas',
+      age: 26,
+      city: 'Šilutė',
+      street: 'Tilžės g.',
+      house: '18',
+      distance: 2.5,
+      gender: 'Vyras',
+      bodyType: 'Atletiškas',
+      height: '182',
+      hairColor: 'Šviesūs',
+      eyeColor: 'Mėlynos',
+      civilStatus: 'Vienišius',
+      smoking: 'Ne',
+      tattoos: 'Taip',
+      piercing: 'Ne',
+      bio: 'Laukinių nuotykių entuziastas, medžiotojas ir žvejys. Mėgstu gamtą, lauko veiklas ir ekstremalius nuotykius. Ieškau partnerės, su kuria dalinsiuosi aistrą gamtai.',
+      interests: ['pasivaikščiojimai gamtoje', 'žygiai / kalnai', 'dviračiai', 'kelionės', 'sportas ir aktyvus laisvalaikis'],
+      eroticInterests: ['Pasimatymai', 'Viešas seksas', 'Analinis saksas', 'BDSM'],
+      photos: [
+        '/domantas_hiking_adventure.png',
+        '/domantas_camping_night.png',
+        '/domantas_fishing_lake.png',
+        '/domantas_forest_exploration.png',
+        '/domantas_mountain_climbing.png',
+        '/domantas_wilderness_outdoor.png'
+      ],
+      avatar: '🌲',
+      avatarBg: 'from-green-600 to-emerald-700',
+      isOnline: true,
+      status: { watching: false, liked: false, likedMe: false }
+    },
+    {
       id: 16,
       name: 'Aurelija',
       age: 45,
@@ -921,6 +958,105 @@ const PazintysPlatforma = () => {
       avatar: '👩‍💼',
       avatarBg: 'from-amber-400 to-yellow-500',
       isOnline: false,
+      status: { watching: false, liked: false, likedMe: false }
+    },
+    {
+      id: 17,
+      name: 'Arturas',
+      age: 38,
+      city: 'Vilnius',
+      street: 'Konstitucijos pr.',
+      house: '7A',
+      distance: 0.6,
+      gender: 'Vyras',
+      bodyType: 'Atletiškas',
+      height: '184',
+      hairColor: 'Šviesūs',
+      eyeColor: 'Mėlynos',
+      civilStatus: 'Išsiskyręs (-usi)',
+      smoking: 'Ne',
+      tattoos: 'Ne',
+      piercing: 'Ne',
+      bio: 'Tech verslininkas, įkūriau kelias sėkmingas IT startuolius. Aktyviai investuoju į inovacijas ir technologijas. Ieškau intelektualios ir ambicingos partnerės, su kuria kurtume ateitį.',
+      interests: ['verslas / investavimas', 'technologijos', 'kelionės', 'sportas ir aktyvus laisvalaikis', 'restoranai ir kavinės', 'automobiliai / motociklai'],
+      eroticInterests: ['Pasimatymai', 'Glamonės', 'Tantrinis seksas', 'Saugus seksas'],
+      photos: [
+        '/arturas_tech_startup.png',
+        '/arturas_luxury_car.png',
+        '/arturas_restaurant_modern.png',
+        '/arturas_sports_activity.png',
+        '/arturas_travel_business.png',
+        '/arturas_casual_smart.png'
+      ],
+      avatar: '👨‍💼',
+      avatarBg: 'from-slate-600 to-gray-700',
+      isOnline: true,
+      status: { watching: false, liked: false, likedMe: false }
+    },
+    {
+      id: 18,
+      name: 'Kęstutis',
+      age: 42,
+      city: 'Vilnius',
+      street: 'Vilniaus g.',
+      house: '31',
+      distance: 0.5,
+      gender: 'Vyras',
+      bodyType: 'Vidutinis',
+      height: '188',
+      hairColor: 'Juodi',
+      eyeColor: 'Tamsiai rudos',
+      civilStatus: 'Išsiskyręs (-usi)',
+      smoking: 'Ne',
+      tattoos: 'Ne',
+      piercing: 'Ne',
+      bio: 'Verslo bankininkas, investicijų konsultantas. Įkūriau sėkmingą finansinės konsultacijų įmonę. Ieškau intelektualios partnerės, su kuria dalinsiuosi sėkmę ir aukštus tikslus.',
+      interests: ['verslas / investavimas', 'restoranai ir kavinės', 'kelionės', 'menas ir parodos'],
+      eroticInterests: ['Pasimatymai', 'Glamonės', 'Tantrinis seksas', 'Saugus seksas'],
+      photos: [
+        '/kestutis_business_suit.png',
+        '/kestutis_luxury_office.png',
+        '/kestutis_restaurant_elegant.png',
+        '/kestutis_golf_club.png',
+        '/kestutis_travel_business.png',
+        '/kestutis_casual_elegant.png'
+      ],
+      avatar: '👔',
+      avatarBg: 'from-indigo-600 to-blue-700',
+      isOnline: false,
+      status: { watching: false, liked: false, likedMe: false }
+    },
+    {
+      id: 19,
+      name: 'Basta',
+      age: 29,
+      city: 'Klaipėda',
+      street: 'Manto g.',
+      house: '12',
+      distance: 1.4,
+      gender: 'Moteris',
+      bodyType: 'Stambesnis',
+      height: '172',
+      hairColor: 'Daugiaspalviai',
+      eyeColor: 'Rudos',
+      civilStatus: 'Vienišius',
+      smoking: 'Ne',
+      tattoos: 'Taip',
+      piercing: 'Taip',
+      bio: 'Punk roko muzikantė, menininkė. Laisva dvasia, kūrybinga siela. Ieškau partnerio, kuris supranta meno kalbą.',
+      interests: ['muzika', 'menas ir parodos', 'koncertai', 'fotografija'],
+      eroticInterests: ['Pasimatymai', 'Bučiavimasis', 'Virtualus seksas', 'BDSM'],
+      photos: [
+        '/basta_winter_concert.png',
+        '/basta_spring_art.png',
+        '/basta_summer_festival.png',
+        '/basta_autumn_studio.png',
+        '/basta_winter_indoor.png',
+        '/basta_spring_outdoor.png'
+      ],
+      avatar: '🎸',
+      avatarBg: 'from-purple-600 to-pink-700',
+      isOnline: true,
       status: { watching: false, liked: false, likedMe: false }
     }
   ]);
@@ -1208,46 +1344,96 @@ const PazintysPlatforma = () => {
       return;
     }
 
-    // Simuliuoti patvirtinimo kodo siuntimą
+    // Generuoti patvirtinimo kodą
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setStoredVerificationCode(code); // Išsaugoti kodą patikrinimui
+    
     const sentTo = [];
     
+    // Siųsti email, jei nurodytas
     if (registerEmail.trim()) {
       sentTo.push('email');
-    }
-    if (registerPhone.trim()) {
-      sentTo.push('phone');
+      setIsSendingEmail(true);
+      
+      // Asinchroniškai siųsti email
+      sendVerificationEmail(registerEmail, code, registerEmail.split('@')[0] || 'Naudotojas')
+        .then(result => {
+          console.log('Email siuntimo rezultatas:', result);
+          setIsSendingEmail(false);
+          
+          if (result.success && !result.mock) {
+            // Tikras email išsiųstas sėkmingai
+            console.log(`✅ Email sėkmingai išsiųstas į ${registerEmail} iš nsaru378@gmail.com`);
+          } else if (result.mock) {
+            // Mock mode - development režimas
+            console.log(`⚠️ Email siuntimas mock režime. Kodas: ${code}`);
+            alert(`Email siuntimas mock režime. Patvirtinimo kodas: ${code}\n\nPastaba: Production režime sukonfigūruokite EmailJS arba Backend email siuntimą.`);
+          } else {
+            // Email siuntimas nepavyko
+            console.warn(`⚠️ Email siuntimo problema: ${result.message}`);
+            alert(`Klaida siunčiant email į ${registerEmail}: ${result.message || 'Nežinoma klaida'}\n\nPatvirtinimo kodas: ${code}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
+          }
+        })
+        .catch(error => {
+          console.error('Email siuntimo klaida:', error);
+          setIsSendingEmail(false);
+          // Net jei email nepavyko, tęsti registraciją (galima naudoti telefoną arba bandyti vėliau)
+          alert(`Nepavyko išsiųsti email į ${registerEmail}.\n\nPatvirtinimo kodas: ${code}\n\nKlaida: ${error.message || 'Nežinoma klaida'}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
+        });
     }
     
+    // SMS siuntimas (telefono numeriu) - simuliacija
+    if (registerPhone.trim()) {
+      sentTo.push('phone');
+      // SMS siuntimas čia - reikia integruoti SMS API arba backend
+      console.log('SMS siuntimas (simuliacija):', { phone: registerPhone, code });
+    }
+    
+    // Atidaryti patvirtinimo modalą
     setVerificationSentTo(sentTo);
     setShowVerification(true);
     setShowRegisterModal(false);
     
-    const messages = [];
-    if (registerEmail.trim()) {
-      messages.push(`Patvirtinimo kodas išsiųstas į el. paštą ${registerEmail}`);
+    // Pranešimas vartotojui
+    if (registerEmail.trim() && registerPhone.trim()) {
+      // Ir email, ir telefonas
+      console.log(`Patvirtinimo kodas: ${code}`);
+      alert(`Patvirtinimo kodas siunčiamas į el. paštą ${registerEmail} ir telefoną ${registerPhone}.\n\nPrašome patikrinti el. paštą (taip pat patikrinkite spam folderį).`);
+    } else if (registerEmail.trim()) {
+      // Tik email
+      console.log(`Patvirtinimo kodas: ${code}`);
+      alert(`Patvirtinimo kodas siunčiamas į el. paštą ${registerEmail}.\n\nPrašome patikrinti el. paštą (taip pat patikrinkite spam folderį).`);
+    } else if (registerPhone.trim()) {
+      // Tik telefonas
+      console.log(`Patvirtinimo kodas: ${code}`);
+      alert(`Patvirtinimo kodas siunčiamas į telefoną ${registerPhone}.\n\nKodas (testavimui): ${code}`);
     }
-    if (registerPhone.trim()) {
-      messages.push(`Patvirtinimo kodas išsiųstas į telefoną ${registerPhone}`);
-    }
-    
-    alert(`${messages.join(' ir ')}. Kodas: ${code} (simuliacija)`);
   };
 
   const handleVerifyCode = () => {
-    if (verificationCode.length === 6) {
-      alert('Registracija sėkminga! Dabar galite prisijungti.');
-      setShowVerification(false);
-      setRegisterEmail('');
-      setRegisterPhone('');
-      setRegisterPassword('');
-      setRegisterConfirmPassword('');
-      setVerificationCode('');
-      setVerificationSentTo([]);
-      setShowLoginModal(true);
-    } else {
+    if (verificationCode.length !== 6) {
       alert('Patvirtinimo kodas turi būti 6 skaitmenų');
+      return;
     }
+    
+    // Patikrinti, ar kodas teisingas
+    if (storedVerificationCode && verificationCode !== storedVerificationCode) {
+      alert('Neteisingas patvirtinimo kodas. Prašome patikrinti ir bandyti dar kartą.');
+      return;
+    }
+    
+    // Kodas teisingas - užbaigti registraciją
+    alert('Registracija sėkminga! Dabar galite prisijungti.');
+    setShowVerification(false);
+    setRegisterEmail('');
+    setRegisterPhone('');
+    setRegisterPassword('');
+    setRegisterConfirmPassword('');
+    setVerificationCode('');
+    setStoredVerificationCode(null);
+    setVerificationSentTo([]);
+    setIsSendingEmail(false);
+    setShowLoginModal(true);
   };
 
   const handleLogin = () => {
@@ -2123,7 +2309,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                       <input 
@@ -2171,13 +2357,13 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
                         onChange={(e) => setRegistrationData({...registrationData, height: e.target.value})}
                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base"
-                        placeholder="Pvz., 175"
+                        placeholder="Pvz., 175 cm"
                         min="100"
                         max="250"
                       />
@@ -2267,11 +2453,16 @@ const PazintysPlatforma = () => {
                         alert(`Prašome užpildyti visus privalomus laukus:\n${errors.join('\n')}`);
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'bendra-info']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('bendra-info')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('bendra-info') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2289,11 +2480,16 @@ const PazintysPlatforma = () => {
                   <p className="text-sm text-gray-400 mt-2">{registrationData.bio.length} / 700 simbolių</p>
                   <button
                     onClick={() => {
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'apie-mane']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('apie-mane')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('apie-mane') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2380,11 +2576,16 @@ const PazintysPlatforma = () => {
                         alert('Būtina pasirinkti bent vieną pomėgį');
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'pomegiai']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('pomegiai')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('pomegiai') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2471,11 +2672,16 @@ const PazintysPlatforma = () => {
                         alert('Būtina pasirinkti bent vieną erotinį pomėgį');
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'erotiniai-pomegiai']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('erotiniai-pomegiai')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('erotiniai-pomegiai') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
               </div>
@@ -2602,7 +2808,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                   </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                         <input 
@@ -2658,7 +2864,7 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
@@ -2769,11 +2975,16 @@ const PazintysPlatforma = () => {
                         alert(`Prašome užpildyti visus privalomus laukus:\n${errors.join('\n')}`);
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'bendra-info-profilis']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('bendra-info-profilis')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('bendra-info-profilis') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2794,11 +3005,16 @@ const PazintysPlatforma = () => {
                   <p className="text-sm text-gray-400 mt-2">{registrationData.bio.length} / 700 simbolių</p>
                   <button
                     onClick={() => {
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'apie-mane-profilis']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('apie-mane-profilis')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('apie-mane-profilis') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2878,11 +3094,16 @@ const PazintysPlatforma = () => {
                         alert('Būtina pasirinkti bent vieną pomėgį');
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'pomegiai-profilis']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('pomegiai-profilis')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                    Išsaugoti pakeitimus
+                    {savedSections.has('pomegiai-profilis') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                   </button>
                 </div>
 
@@ -2899,7 +3120,7 @@ const PazintysPlatforma = () => {
                             return;
                           }
                           const isSelected = registrationData.eroticInterests.includes(interest);
-                          const newInterests = isSelected 
+                          const newInterests = isSelected
                             ? registrationData.eroticInterests.filter(i => i !== interest)
                             : [...registrationData.eroticInterests, interest];
                           setRegistrationData({...registrationData, eroticInterests: newInterests});
@@ -2962,11 +3183,16 @@ const PazintysPlatforma = () => {
                         alert('Būtina pasirinkti bent vieną erotinį pomėgį');
                         return;
                       }
-                      alert('Pakeitimai išsaugoti');
+                      // Išsaugoti - pažymėti sekciją kaip išsaugotą
+                      setSavedSections(prev => new Set([...prev, 'erotiniai-pomegiai-profilis']));
                     }}
-                    className="mt-3 sm:mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto"
+                    className={`mt-3 sm:mt-4 px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base w-full sm:w-auto border-2 border-orange-500 transition-colors ${
+                      savedSections.has('erotiniai-pomegiai-profilis')
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-300 hover:bg-orange-400 text-gray-900'
+                    }`}
                   >
-                  Išsaugoti pakeitimus
+                  {savedSections.has('erotiniai-pomegiai-profilis') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                 </button>
                 </div>
               </div>
@@ -3583,13 +3809,29 @@ const PazintysPlatforma = () => {
             </div>
 
             <div className="space-y-3 sm:space-y-4">
+              {isSendingEmail && verificationSentTo.includes('email') && (
+                <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-3 text-sm text-blue-300">
+                  Siunčiamas email į {registerEmail}...
+                </div>
+              )}
+              
               <p className="text-gray-300">
-                Įveskite 6 skaitmenų patvirtinimo kodą, kuris buvo išsiųstas į {verificationSentTo.includes('email') && verificationSentTo.includes('phone') 
+                Įveskite 6 skaitmenų patvirtinimo kodą, kuris buvo išsiųstas į {verificationSentTo.includes('email') && verificationSentTo.includes('phone')
                   ? 'el. paštą ir telefoną'
                   : verificationSentTo.includes('email')
                   ? 'el. paštą'
                   : 'telefoną'}
               </p>
+              
+              {registerEmail && (
+                <p className="text-xs text-gray-400">
+                  Patikrinkite el. paštą: {registerEmail}
+                  {verificationSentTo.includes('email') && !isSendingEmail && (
+                    <span className="text-green-400 ml-2">✓ Email siuntimas užbaigtas</span>
+                  )}
+                </p>
+              )}
+              
               <div>
                 <input
                   type="text"
@@ -3602,10 +3844,21 @@ const PazintysPlatforma = () => {
               </div>
               <button
                 onClick={handleVerifyCode}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-lg transition-colors"
+                disabled={verificationCode.length !== 6}
+                className={`w-full font-medium py-3 rounded-lg transition-colors ${
+                  verificationCode.length === 6
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                }`}
               >
                 Patvirtinti
               </button>
+              
+              {process.env.NODE_ENV === 'development' && storedVerificationCode && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Development režimas: Kodas: {storedVerificationCode}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -3891,6 +4144,23 @@ const PazintysPlatforma = () => {
           />
         </div>
       )}
+
+      {/* Footer */}
+      <div className="bg-gray-800 border-t border-gray-700 px-4 py-3 sm:py-4 mt-auto">
+        <div className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+          <button className="text-gray-300 hover:text-orange-500 transition-colors text-sm sm:text-base font-medium">
+            Apie svetainę
+          </button>
+          <span className="hidden sm:inline text-gray-600">|</span>
+          <button className="text-gray-300 hover:text-orange-500 transition-colors text-sm sm:text-base font-medium">
+            Taisyklės
+          </button>
+          <span className="hidden sm:inline text-gray-600">|</span>
+          <button className="text-gray-300 hover:text-orange-500 transition-colors text-sm sm:text-base font-medium">
+            Kontaktai
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
