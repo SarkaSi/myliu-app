@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { stripeConfig, paymentLinks, createCheckoutSession } from './stripeConfig';
 
 const PazintysPlatforma = () => {
   const [currentView, setCurrentView] = useState('nariai');
@@ -45,6 +47,10 @@ const PazintysPlatforma = () => {
   const [expandedImage, setExpandedImage] = useState(null);
   const [expandedImageIndex, setExpandedImageIndex] = useState(null);
   
+  // Stripe state
+  const [stripePromise, setStripePromise] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
   // Photo editor state
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [currentEditingPhoto, setCurrentEditingPhoto] = useState(null);
@@ -55,6 +61,54 @@ const PazintysPlatforma = () => {
     offsetY: 0,
     originalImage: null
   });
+
+  // Initialize Stripe
+  useEffect(() => {
+    if (stripeConfig.publishableKey && stripeConfig.publishableKey !== 'pk_test_your_publishable_key_here') {
+      setStripePromise(loadStripe(stripeConfig.publishableKey));
+    } else {
+      console.warn('Stripe publishable key not configured. Please set VITE_STRIPE_PUBLISHABLE_KEY in .env file');
+    }
+    
+    // Check for successful payment redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const canceled = urlParams.get('canceled');
+    
+    if (sessionId) {
+      // Payment successful - handle in your backend webhook
+      // For now, we'll check session status
+      handlePaymentSuccess(sessionId);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (canceled) {
+      alert('Mokėjimas atšauktas');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const handlePaymentSuccess = async (sessionId) => {
+    try {
+      // Verify payment with your backend
+      // For now, this is a mock implementation
+      // In production, verify the session on your backend
+      const response = await fetch(`/api/verify-session?session_id=${sessionId}`);
+      
+      if (response.ok) {
+        const { credits, success } = await response.json();
+        if (success && credits) {
+          setCredits(prevCredits => prevCredits + credits);
+          alert(`Mokėjimas sėkmingas! Gavo ${credits} žinučių.`);
+        }
+      } else {
+        // Fallback: Show success message (in production, always verify on backend)
+        alert('Mokėjimas sėkmingas! Žinutės bus pridėtos automatiškai.');
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      alert('Mokėjimas sėkmingas! Žinutės bus pridėtos automatiškai.');
+    }
+  };
 
   // PHOTO PROCESSING FUNCTION
   const processAndResizeImage = (file, cropData = null) => {
@@ -1116,10 +1170,63 @@ const PazintysPlatforma = () => {
     }, 2000);
   };
 
-  const buyCredits = (amount, price) => {
-    setCredits(prevCredits => prevCredits + amount);
-    setShowPayment(false);
-    alert(`Sėkmingai nusipirkote ${amount} žinučių už ${price}€!`);
+  const buyCredits = async (creditsAmount, priceEur) => {
+    setIsProcessingPayment(true);
+    
+    try {
+      // Determine which pack was selected
+      const packType = creditsAmount === 100 ? 'pack100' : 'pack1000';
+      const packConfig = stripeConfig.products[packType];
+      
+      // Check if Payment Links are configured (simpler, no backend required)
+      if (paymentLinks[packType] && paymentLinks[packType] !== `https://buy.stripe.com/your_${creditsAmount}_messages_link`) {
+        // Use Payment Links (no backend required)
+        window.location.href = paymentLinks[packType];
+        return;
+      }
+      
+      // Otherwise, use Checkout Session (requires backend)
+      if (stripePromise && packConfig.priceId && packConfig.priceId !== `price_your_${creditsAmount}_messages_price_id_here`) {
+        const stripe = await stripePromise;
+        
+        try {
+          // Create Checkout Session via backend
+          const sessionId = await createCheckoutSession(packConfig.priceId, creditsAmount);
+          
+          // Redirect to Stripe Checkout
+          const { error } = await stripe.redirectToCheckout({
+            sessionId: sessionId,
+          });
+          
+          if (error) {
+            throw error;
+          }
+        } catch (error) {
+          console.error('Stripe Checkout error:', error);
+          
+          // Fallback to Payment Link if available
+          if (paymentLinks[packType]) {
+            window.location.href = paymentLinks[packType];
+            return;
+          }
+          
+          // If both methods fail, show development mode message
+          throw new Error('Stripe nekonfigūruotas. Prašome nustatyti Stripe raktus arba Payment Links.');
+        }
+      } else {
+        // Development mode - simulate payment
+        if (confirm(`Simuliacija: Nusipirkti ${creditsAmount} žinučių už ${priceEur}€?`)) {
+          setCredits(prevCredits => prevCredits + creditsAmount);
+          setShowPayment(false);
+          alert(`Sėkmingai nusipirkote ${creditsAmount} žinučių už ${priceEur}€!`);
+        }
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(`Klaida: ${error.message || 'Nepavyko pradėti mokėjimo. Prašome patikrinti Stripe konfigūraciją.'}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const isEmail = (str) => {
@@ -1690,7 +1797,7 @@ const PazintysPlatforma = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Erotiškumas</label>
+                      <label className="block text-sm font-medium mb-2">Artumo poreikiai</label>
                       <select 
                         value={filters.eroticInterest}
                         onChange={(e) => setFilters({...filters, eroticInterest: e.target.value})}
@@ -2339,9 +2446,9 @@ const PazintysPlatforma = () => {
                   </button>
                 </div>
 
-                {/* Mano erotiniai pomėgiai */}
+                {/* Artumo poreikiai */}
                     <div>
-                  <h3 className="text-xl font-bold mb-4">Mano erotiniai pomėgiai *</h3>
+                  <h3 className="text-xl font-bold mb-4">Artumo poreikiai *</h3>
                   <div className="flex flex-wrap gap-2">
                     {['Pasimatymai', 'Bučiavimasis', 'Glamonės', 'Erotinis masažas', 'Virtualus seksas', 'Tantrinis seksas', 'Saugus seksas', '69', 'Oralinis seksas', 'Viešas seksas', 'Analinis saksas', 'SM', 'BDSM', 'Grupinis seksas', 'Keitimasis partneriais', 'Vergavimas', 'Kita (Įrašyti)'].map((interest) => (
                       <button
@@ -2385,7 +2492,7 @@ const PazintysPlatforma = () => {
                             setCustomEroticText(e.target.value);
                           }
                         }}
-                        placeholder="Įrašykite erotinį pomėgį (iki 20 simbolių)"
+                        placeholder="Įrašykite artumo poreikį (iki 20 simbolių)"
                         className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
                         maxLength={20}
                       />
@@ -2419,7 +2526,7 @@ const PazintysPlatforma = () => {
                   <button
                     onClick={() => {
                       if (registrationData.eroticInterests.length === 0) {
-                        alert('Būtina pasirinkti bent vieną erotinį pomėgį');
+                        alert('Būtina pasirinkti bent vieną artumo poreikį');
                         return;
                       }
                       alert('Pakeitimai išsaugoti');
@@ -2837,9 +2944,9 @@ const PazintysPlatforma = () => {
                   </button>
                 </div>
 
-                {/* Mano erotiniai pomėgiai */}
-                <div>
-                  <h3 className="text-xl font-bold mb-4">Mano erotiniai pomėgiai *</h3>
+                {/* Artumo poreikiai */}
+                    <div>
+                  <h3 className="text-xl font-bold mb-4">Artumo poreikiai *</h3>
                   <div className="flex flex-wrap gap-2">
                     {['Pasimatymai', 'Bučiavimasis', 'Glamonės', 'Erotinis masažas', 'Virtualus seksas', 'Tantrinis seksas', 'Saugus seksas', '69', 'Oralinis seksas', 'Viešas seksas', 'Analinis saksas', 'SM', 'BDSM', 'Grupinis seksas', 'Keitimasis partneriais', 'Vergavimas', 'Kita (Įrašyti)'].map((interest) => (
                       <button
@@ -2877,7 +2984,7 @@ const PazintysPlatforma = () => {
                             setCustomEroticText(e.target.value);
                           }
                         }}
-                        placeholder="Įrašykite erotinį pomėgį (iki 20 simbolių)"
+                        placeholder="Įrašykite artumo poreikį (iki 20 simbolių)"
                         className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
                         maxLength={20}
                       />
@@ -2910,7 +3017,7 @@ const PazintysPlatforma = () => {
                   <button
                     onClick={() => {
                       if (registrationData.eroticInterests.length === 0) {
-                        alert('Būtina pasirinkti bent vieną erotinį pomėgį');
+                        alert('Būtina pasirinkti bent vieną artumo poreikį');
                         return;
                       }
                       alert('Pakeitimai išsaugoti');
@@ -3333,7 +3440,7 @@ const PazintysPlatforma = () => {
               {/* Erotic Interests */}
               {selectedProfile.eroticInterests && selectedProfile.eroticInterests.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold mb-3">Mano erotiniai pomėgiai</h3>
+                  <h3 className="text-xl font-bold mb-3">Artumo poreikiai</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedProfile.eroticInterests.map((interest, idx) => (
                       <span key={idx} className="bg-purple-600 text-white px-4 py-2 rounded-full">
@@ -3601,8 +3708,12 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div 
-                onClick={() => buyCredits(100, 1)}
-                className="bg-gray-700 hover:bg-gray-600 rounded-lg p-4 sm:p-6 cursor-pointer border-2 border-transparent hover:border-orange-500 transition-all"
+                onClick={() => !isProcessingPayment && buyCredits(100, 1)}
+                className={`bg-gray-700 rounded-lg p-4 sm:p-6 border-2 border-transparent transition-all ${
+                  isProcessingPayment 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-gray-600 hover:border-orange-500 cursor-pointer'
+                }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-lg sm:text-2xl font-bold">100 žinučių</span>
@@ -3612,8 +3723,12 @@ const PazintysPlatforma = () => {
               </div>
 
               <div 
-                onClick={() => buyCredits(1000, 7)}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-lg p-4 sm:p-6 cursor-pointer border-2 border-transparent hover:border-white transition-all relative overflow-hidden"
+                onClick={() => !isProcessingPayment && buyCredits(1000, 7)}
+                className={`bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-4 sm:p-6 border-2 border-transparent transition-all relative overflow-hidden ${
+                  isProcessingPayment 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:from-orange-600 hover:to-red-600 hover:border-white cursor-pointer'
+                }`}
               >
                 <div className="absolute top-2 right-2 bg-yellow-400 text-black px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                   POPULIARIAUSIAS
@@ -3625,6 +3740,12 @@ const PazintysPlatforma = () => {
                 <p className="text-white/80 text-xs sm:text-sm">0.007€ už žinutę • Sutaupote 30%</p>
               </div>
             </div>
+            
+            {isProcessingPayment && (
+              <div className="mt-4 text-center text-sm text-orange-500">
+                Peradresuojama į Stripe mokėjimo puslapį...
+              </div>
+            )}
 
             <div className="mt-4 sm:mt-6 flex items-center gap-2 text-xs sm:text-sm text-gray-400">
               <Shield size={14} className="sm:w-4 sm:h-4" />
