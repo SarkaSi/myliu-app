@@ -23,6 +23,7 @@ const PazintysPlatforma = () => {
   const [isRegistration, setIsRegistration] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPhone, setRegisterPhone] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -1130,7 +1131,13 @@ const PazintysPlatforma = () => {
   };
 
   const handleRegister = () => {
-    // Patikrinti, ar bent vienas laukas užpildytas
+    // Patikrinti vardą
+    if (!registerName.trim()) {
+      alert('Prašome įvesti vardą');
+      return;
+    }
+
+    // Patikrinti, ar bent vienas laukas užpildytas (el. paštas arba telefonas)
     if (!registerEmail.trim() && !registerPhone.trim()) {
       alert('Prašome užpildyti bent vieną: el. paštą arba telefono numerį');
       return;
@@ -1193,6 +1200,7 @@ const PazintysPlatforma = () => {
     if (verificationCode.length === 6) {
       alert('Registracija sėkminga! Dabar galite prisijungti.');
       setShowVerification(false);
+      setRegisterName('');
       setRegisterEmail('');
       setRegisterPhone('');
       setRegisterPassword('');
@@ -2066,7 +2074,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                       <input 
@@ -2114,13 +2122,13 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
                         onChange={(e) => setRegistrationData({...registrationData, height: e.target.value})}
                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base"
-                        placeholder="Pvz., 175"
+                        placeholder="Pvz., 175 cm"
                         min="100"
                         max="250"
                       />
@@ -2545,7 +2553,7 @@ const PazintysPlatforma = () => {
                         ))}
                       </select>
                   </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-sm text-gray-400 mb-2">Vietovė *</label>
                       <div className="flex gap-2">
                         <input 
@@ -2601,7 +2609,7 @@ const PazintysPlatforma = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Ūgis (cm) *</label>
+                      <label className="block text-sm text-gray-400 mb-2">Ūgis *</label>
                       <input 
                         type="number" 
                         value={registrationData.height}
@@ -2610,7 +2618,7 @@ const PazintysPlatforma = () => {
                           setUserProfile({...userProfile, height: e.target.value});
                         }}
                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 text-white text-sm sm:text-base"
-                        placeholder="Pvz., 175"
+                        placeholder="Pvz., 175 cm"
                         min="100"
                         max="250"
                       />
@@ -3424,7 +3432,17 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-gray-400">(nebūtinas)</span></label>
+                <label className="block text-sm font-medium mb-2">Vardas <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  value={registerName}
+                  onChange={(e) => setRegisterName(e.target.value)}
+                  placeholder="Įveskite savo vardą"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-gray-400">(pasirinktinai, jei nėra telefono)</span></label>
                 <input
                   type="email"
                   value={registerEmail}
@@ -3434,7 +3452,7 @@ const PazintysPlatforma = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(nebūtinas)</span></label>
+                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(pasirinktinai, jei nėra el. pašto)</span></label>
                 <input
                   type="tel"
                   value={registerPhone}
@@ -3442,6 +3460,7 @@ const PazintysPlatforma = () => {
                   placeholder="pvz: +37061234567"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
+                <p className="text-xs text-gray-400 mt-1">Prašome užpildyti bent vieną: el. paštą arba telefono numerį</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Slaptažodis</label>
