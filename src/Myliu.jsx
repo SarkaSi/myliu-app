@@ -48,9 +48,7 @@ const PazintysPlatforma = () => {
   // Tooltip states
   const [showLifeWithoutLimitsTooltip, setShowLifeWithoutLimitsTooltip] = useState(false);
   const [showLogoHeartTooltip, setShowLogoHeartTooltip] = useState(false);
-  const [showLikeTooltip, setShowLikeTooltip] = useState(false);
   const [showMeetingTooltip, setShowMeetingTooltip] = useState(false);
-  const [showProfileCardLikeTooltip, setShowProfileCardLikeTooltip] = useState(null); // profileId
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, profileId: null });
   const [tooltipStyle, setTooltipStyle] = useState({ top: 0, left: 0, transform: 'translateX(-50%)' });
   
@@ -337,7 +335,7 @@ const PazintysPlatforma = () => {
 
   // Adjust tooltip position to stay within viewport boundaries
   useEffect(() => {
-    if ((showLikeTooltip || showMeetingTooltip || showProfileCardLikeTooltip) && tooltipPosition.left > 0) {
+    if (showMeetingTooltip && tooltipPosition.left > 0) {
       if (typeof window === 'undefined') return;
       
       const adjustTooltipPosition = () => {
@@ -396,7 +394,7 @@ const PazintysPlatforma = () => {
       // Reset tooltip style when tooltips are hidden
       setTooltipStyle({ top: 0, left: 0, transform: 'translateX(-50%)' });
     }
-  }, [tooltipPosition, showLikeTooltip, showMeetingTooltip, showProfileCardLikeTooltip]);
+  }, [tooltipPosition, showMeetingTooltip]);
 
   useEffect(() => {
     setRegistrationData({
@@ -893,39 +891,6 @@ const PazintysPlatforma = () => {
       status: { watching: false, liked: false, likedMe: false }
     },
     {
-      id: 15,
-      name: 'Basta',
-      age: 29,
-      city: 'Klaipėda',
-      street: 'Herkaus Manto g.',
-      house: '24',
-      distance: 1.5,
-      gender: 'Moteris',
-      bodyType: 'Stambesnis',
-      height: '172',
-      hairColor: 'Daugiaspalviai',
-      eyeColor: 'Rudos',
-      civilStatus: 'Vienišius',
-      smoking: 'Taip',
-      tattoos: 'Taip',
-      piercing: 'Taip',
-      bio: 'Pankė, menininkė, būti kitokia - mano gyvenimo filosofija. Ieškau kažko tikro.',
-      interests: ['muzika / koncertai', 'menas / tapyba', 'tatuiruotės', 'alternatyvi kultura'],
-      eroticInterests: ['Pasimatymai', 'Bučiavimasis', 'Saugus seksas', 'Viešas seksas'],
-      photos: [
-        '/basta_winter_concert.png',
-        '/basta_spring_art.png',
-        '/basta_summer_festival.png',
-        '/basta_autumn_studio.png',
-        '/basta_winter_indoor.png',
-        '/basta_spring_outdoor.png'
-      ],
-      avatar: '👩‍🎤',
-      avatarBg: 'from-gray-600 to-purple-600',
-      isOnline: true,
-      status: { watching: false, liked: false, likedMe: false }
-    },
-    {
       id: 16,
       name: 'Aurelija',
       age: 45,
@@ -1418,53 +1383,23 @@ const PazintysPlatforma = () => {
             </svg>
             {profile.status.watching ? 'Stebiu' : 'Stebėti'}
           </button>
-          <div className="relative flex-1">
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                toggleStatus(profile.id, 'liked');
-              }}
-              onMouseEnter={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: profile.id });
-                setShowProfileCardLikeTooltip(profile.id);
-              }}
-              onMouseLeave={() => setShowProfileCardLikeTooltip(null)}
-              className={`w-full px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
-                profile.status.liked
-                  ? 'text-white'
-                  : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
-              }`}
-              style={profile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={profile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
-              </svg>
-              {profile.status.liked ? 'Myliu' : 'Mylėti'}
-            </button>
-            {showProfileCardLikeTooltip === profile.id && tooltipPosition && tooltipPosition.profileId === profile.id && tooltipPosition.left > 0 && (
-              <div 
-                className="fixed bg-gray-800 border-2 border-orange-500 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
-                style={{
-                  top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
-                  left: `${tooltipStyle?.left || tooltipPosition.left}px`,
-                  transform: tooltipStyle?.transform || 'translateX(-50%)',
-                  maxWidth: 'calc(100vw - 1rem)',
-                  width: 'max-content',
-                  minWidth: '100px',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  maxHeight: 'calc(100vh - 1rem)',
-                  overflowY: 'auto'
-                }}
-              >
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-orange-500"></div>
-                <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words">
-                  {profile.status?.liked ? 'Pašalinti iš mylimų' : 'Pridėti prie mylimų'}
-                </p>
-              </div>
-            )}
-          </div>
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              toggleStatus(profile.id, 'liked');
+            }}
+            className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
+              profile.status.liked
+                ? 'text-white'
+                : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
+            }`}
+            style={profile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={profile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
+            </svg>
+            {profile.status.liked ? 'Myliu' : 'Mylėti'}
+          </button>
         </div>
       </div>
     );
@@ -3315,50 +3250,20 @@ const PazintysPlatforma = () => {
                   </svg>
                   {selectedProfile.status.watching ? 'Stebiu' : 'Stebėti'}
                 </button>
-                <div className="relative flex-1">
-                  <button 
-                    onClick={() => toggleStatus(selectedProfile.id, 'liked')}
-                    onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: null });
-                      setShowLikeTooltip(true);
-                    }}
-                    onMouseLeave={() => setShowLikeTooltip(false)}
-                    className={`w-full px-6 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
-                      selectedProfile.status.liked
-                        ? 'text-white'
-                        : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
-                    }`}
-                    style={selectedProfile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={selectedProfile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
-                    </svg>
-                    {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
-                  </button>
-                  {showLikeTooltip && tooltipPosition && tooltipPosition.left > 0 && selectedProfile && (
-                    <div 
-                      className="fixed bg-gray-800 border-2 border-orange-500 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
-                      style={{
-                        top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
-                        left: `${tooltipStyle?.left || tooltipPosition.left}px`,
-                        transform: tooltipStyle?.transform || 'translateX(-50%)',
-                        maxWidth: 'calc(100vw - 1rem)',
-                        width: 'max-content',
-                        minWidth: '120px',
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        maxHeight: 'calc(100vh - 1rem)',
-                        overflowY: 'auto'
-                      }}
-                    >
-                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-orange-500"></div>
-                      <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words">
-                        {selectedProfile.status?.liked ? 'Pašalinti iš mylimų' : 'Pridėti prie mylimų'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <button 
+                  onClick={() => toggleStatus(selectedProfile.id, 'liked')}
+                  className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 ${
+                    selectedProfile.status.liked
+                      ? 'text-white'
+                      : 'bg-gray-800 text-orange-500 hover:bg-orange-500/10'
+                  }`}
+                  style={selectedProfile.status.liked ? { backgroundColor: 'rgb(255, 171, 115)' } : {}}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={selectedProfile.status.liked ? "white" : "#FBBF24"} stroke="white" strokeWidth="2"/>
+                  </svg>
+                  {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
+                </button>
                 <button 
                   onClick={() => {
                     // Patikrinti, ar profilis užpildytas
