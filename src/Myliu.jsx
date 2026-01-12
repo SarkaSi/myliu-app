@@ -1409,7 +1409,14 @@ const PazintysPlatforma = () => {
       bio: 'Ieškau partnerės, su kuria dalinsiuosi gyvenimo patirtimi.',
       interests: ['kelionės', 'muzika', 'skaitymas'],
       eroticInterests: ['Pasimatymai', 'Saugus seksas'],
-      photos: [],
+      photos: [
+        '/plikis_1.png',
+        '/plikis_2.png',
+        '/plikis_3.png',
+        '/plikis_4.png',
+        '/plikis_5.png',
+        '/plikis_6.png'
+      ],
       avatar: '👴',
       avatarBg: 'from-gray-600 to-gray-700',
       isOnline: false,
