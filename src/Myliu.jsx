@@ -1445,8 +1445,7 @@ const PazintysPlatforma = () => {
       photos: [
         '/gytis_1.png',
         '/gytis_2.png',
-        '/gytis_3.png',
-        '/gytis_4.png'
+        '/gytis_3.png'
       ],
       avatar: '🏖️',
       avatarBg: 'from-orange-500 to-yellow-600',
