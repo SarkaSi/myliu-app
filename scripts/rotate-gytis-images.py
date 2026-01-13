@@ -39,10 +39,10 @@ def rotate_images_in_directory(directory, prefix='gytis_'):
             width, height = img.size
             print(f'Apdorojama {filename} (dydis: {width}x{height})...')
             
-            # Pasukti 180 laipsnių, kad turinys būtų teisingai orientuotas
+            # Pasukti 270 laipsnių (-90), kad turinys būtų teisingai orientuotas
             # Tai pasuks nuotrauką taip, kad horizontalus turinys taptų vertikaliu
-            print(f'  Sukam 180 laipsniu...')
-            rotated_img = img.rotate(180, expand=True)
+            print(f'  Sukam 270 laipsniu (-90)...')
+            rotated_img = img.rotate(-90, expand=True)
             
             rotated_img.save(filepath, 'PNG', quality=95)
             new_width, new_height = rotated_img.size
