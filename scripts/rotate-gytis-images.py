@@ -39,14 +39,36 @@ def rotate_images_in_directory(directory, prefix='gytis_'):
             width, height = img.size
             print(f'Apdorojama {filename} (dydis: {width}x{height})...')
             
-            # Pasukti 270 laipsnių (-90), kad turinys būtų teisingai orientuotas
-            # Tai pasuks nuotrauką taip, kad horizontalus turinys taptų vertikaliu
-            print(f'  Sukam 270 laipsniu (-90)...')
-            rotated_img = img.rotate(-90, expand=True)
+            # Pasukti 90 laipsnių pagal laikrodžio rodyklę
+            print(f'  Sukam 90 laipsniu pagal laikrodzio rodykle...')
+            rotated_img = img.rotate(90, expand=True)
+            rot_width, rot_height = rotated_img.size
+            print(f'  Po sukimu: {rot_width}x{rot_height}')
             
-            rotated_img.save(filepath, 'PNG', quality=95)
-            new_width, new_height = rotated_img.size
-            print(f'  Pasukta! Naujas dydis: {new_width}x{new_height}')
+            # Apkarpyti nuotrauką - paimti centrinę dalį
+            # Jei nuotrauka horizontalia, apkarpyti iš šonų
+            # Jei vertikali, apkarpyti iš viršaus/apačios
+            if rot_width > rot_height:
+                # Horizontalia - apkarpyti iš šonų, palikti centrą
+                crop_width = rot_height  # Padaryti kvadratinę
+                left = (rot_width - crop_width) // 2
+                top = 0
+                right = left + crop_width
+                bottom = rot_height
+            else:
+                # Vertikali - apkarpyti iš viršaus/apačios, palikti centrą
+                crop_height = rot_width  # Padaryti kvadratinę
+                left = 0
+                top = (rot_height - crop_height) // 2
+                right = rot_width
+                bottom = top + crop_height
+            
+            print(f'  Apkarpoma: ({left}, {top}, {right}, {bottom})')
+            cropped_img = rotated_img.crop((left, top, right, bottom))
+            
+            cropped_img.save(filepath, 'PNG', quality=95)
+            final_width, final_height = cropped_img.size
+            print(f'  Pasukta ir apkarpyta! Galutinis dydis: {final_width}x{final_height}')
             rotated_count += 1
                 
         except Exception as e:
