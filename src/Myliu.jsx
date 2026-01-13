@@ -1421,6 +1421,37 @@ const PazintysPlatforma = () => {
       avatarBg: 'from-gray-600 to-gray-700',
       isOnline: false,
       status: { watching: false, liked: false, likedMe: false }
+    },
+    {
+      id: 31,
+      name: 'Gytis',
+      age: 45,
+      city: 'Vilnius',
+      street: 'Gedimino pr.',
+      house: '28',
+      distance: 0.9,
+      gender: 'Vyras',
+      bodyType: 'Vidutinis',
+      height: '180',
+      hairColor: 'Tamsūs',
+      eyeColor: 'Mėlynos',
+      civilStatus: 'Vienišius',
+      smoking: 'Ne',
+      tattoos: 'Ne',
+      piercing: 'Ne',
+      bio: 'Mėgstu keliones, ypač į šiltas šalis. Ieškau partnerės, su kuria galėčiau dalintis gyvenimo patirtimi ir kurti naujus prisiminimus.',
+      interests: ['kelionės', 'restoranai ir kavinės', 'muzika', 'sportas', 'skaitymas'],
+      eroticInterests: ['Pasimatymai', 'Saugus seksas', 'Glamonės'],
+      photos: [
+        '/gytis_1.png',
+        '/gytis_2.png',
+        '/gytis_3.png',
+        '/gytis_4.png'
+      ],
+      avatar: '🏖️',
+      avatarBg: 'from-orange-500 to-yellow-600',
+      isOnline: true,
+      status: { watching: false, liked: false, likedMe: false }
     }
   ]);
 
