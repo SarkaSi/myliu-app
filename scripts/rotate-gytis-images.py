@@ -39,9 +39,9 @@ def rotate_images_in_directory(directory, prefix='gytis_'):
             width, height = img.size
             print(f'Apdorojama {filename} (dydis: {width}x{height})...')
             
-            # Pasukti 90 laipsnių pagal laikrodžio rodyklę
-            print(f'  Sukam 90 laipsniu pagal laikrodzio rodykle...')
-            rotated_img = img.rotate(90, expand=True)
+            # Pasukti 180 laipsnių
+            print(f'  Sukam 180 laipsniu...')
+            rotated_img = img.rotate(180, expand=True)
             rot_width, rot_height = rotated_img.size
             print(f'  Po sukimu: {rot_width}x{rot_height}')
             
