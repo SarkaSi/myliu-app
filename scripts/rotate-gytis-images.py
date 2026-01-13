@@ -39,17 +39,12 @@ def rotate_images_in_directory(directory, prefix='gytis_'):
             width, height = img.size
             print(f'Apdorojama {filename} (dydis: {width}x{height})...')
             
-            # Jei nuotrauka horizontalia (plotis > aukštis), pasukti 90 laipsnių pagal laikrodžio rodyklę
-            # Jei nuotrauka vertikali, bet reikia pasukti (galbūt neteisinga orientacija)
-            if width > height:
-                print(f'  Horizontalia nuotrauka - sukam 90 laipsniu pagal laikrodzio rodykle...')
-                rotated_img = img.rotate(90, expand=True)
-            else:
-                # Jei vertikali, bet reikia pasukti (galbūt neteisinga orientacija)
-                print(f'  Vertikali nuotrauka - sukam 90 laipsniu pagal laikrodzio rodykle...')
-                rotated_img = img.rotate(90, expand=True)
+            # Pasukti 180 laipsnių, kad turinys būtų teisingai orientuotas
+            # Tai pasuks nuotrauką taip, kad horizontalus turinys taptų vertikaliu
+            print(f'  Sukam 180 laipsniu...')
+            rotated_img = img.rotate(180, expand=True)
             
-            rotated_img.save(filepath, 'PNG')
+            rotated_img.save(filepath, 'PNG', quality=95)
             new_width, new_height = rotated_img.size
             print(f'  Pasukta! Naujas dydis: {new_width}x{new_height}')
             rotated_count += 1
