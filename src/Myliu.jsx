@@ -41,6 +41,16 @@ const PazintysPlatforma = () => {
   const [changePhonePassword, setChangePhonePassword] = useState('');
   const [changePhoneVerificationCode, setChangePhoneVerificationCode] = useState('');
   const [showChangePhoneVerification, setShowChangePhoneVerification] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false); // Ar anketos profilis patvirtintas
+  const [showProfileForm, setShowProfileForm] = useState(false); // Anketos modalas po registracijos
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [changePasswordCurrent, setChangePasswordCurrent] = useState('');
+  const [changePasswordNew, setChangePasswordNew] = useState('');
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState('');
+  const [changeEmailNew, setChangeEmailNew] = useState('');
+  const [changeEmailPassword, setChangeEmailPassword] = useState('');
   const [showCustomHobbyInput, setShowCustomHobbyInput] = useState(false);
   const [customHobbyText, setCustomHobbyText] = useState('');
   const [showCustomEroticInput, setShowCustomEroticInput] = useState(false);
@@ -1848,6 +1858,42 @@ const PazintysPlatforma = () => {
     setLoginPassword('');
   };
 
+  // Patvirtinti anketą – profilis atsiranda tarp narių
+  const handleCompleteProfile = () => {
+    const errors = [];
+    if (!registrationData.name?.trim()) errors.push('Vardas');
+    if (!registrationData.gender) errors.push('Lytis');
+    if (!registrationData.age) errors.push('Amžius');
+    if (!registrationData.city?.trim()) errors.push('Miestas');
+    if (!registrationData.photos?.length) errors.push('Bent viena nuotrauka');
+    if (errors.length > 0) {
+      alert(`Prašome užpildyti privalomus laukus:\n${errors.join(', ')}`);
+      return;
+    }
+    setUserProfile(prev => ({
+      ...prev,
+      name: registrationData.name?.trim() || prev.name,
+      gender: registrationData.gender || prev.gender,
+      age: parseInt(registrationData.age, 10) || prev.age,
+      city: registrationData.city?.trim() || prev.city,
+      street: registrationData.street?.trim() || prev.street,
+      house: registrationData.house?.trim() || prev.house,
+      height: registrationData.height || prev.height,
+      bodyType: registrationData.bodyType || prev.bodyType,
+      civilStatus: registrationData.civilStatus || prev.civilStatus,
+      hairColor: registrationData.hairColor || prev.hairColor,
+      eyeColor: registrationData.eyeColor || prev.eyeColor,
+      bio: registrationData.bio || prev.bio,
+      interests: registrationData.hobbies || prev.interests,
+      eroticInterests: registrationData.eroticInterests || prev.eroticInterests,
+      photos: registrationData.photos || prev.photos
+    }));
+    setProfileComplete(true);
+    setShowProfileForm(false);
+    setCurrentView('nariai');
+    alert('Anketa patvirtinta! Jūsų profilis dabar matomas tarp narių.');
+  };
+
   const renderStatusIcons = (status) => {
     const icons = [];
     if (status.watching) {
@@ -2056,9 +2102,14 @@ const PazintysPlatforma = () => {
             </button>
             <button 
               onClick={() => setCurrentView('profilis')}
-              className="p-1 sm:p-2 hover:bg-gray-700 rounded-full"
+              className="p-0.5 sm:p-1 hover:bg-gray-700 rounded-full overflow-hidden flex-shrink-0"
+              title="Mano profilis"
             >
-              <User size={16} className="sm:w-6 sm:h-6" />
+              {isLoggedIn && userProfile.photos?.length > 0 && userProfile.photos[0] ? (
+                <img src={userProfile.photos[0]} alt="" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover" />
+              ) : (
+                <User size={16} className="sm:w-6 sm:h-6" />
+              )}
             </button>
             <div className="flex items-center gap-0.5 sm:gap-3">
               <button
@@ -2171,7 +2222,11 @@ const PazintysPlatforma = () => {
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-bold">Nariai</h2>
                   <p className="text-orange-500 text-base sm:text-lg">
-                    {profiles.filter(profile => {
+                    {(profileComplete ? [{
+                      id: 'my-profile', age: userProfile.age, distance: 0.5, gender: userProfile.gender,
+                      bodyType: userProfile.bodyType || 'Vidutinis', height: userProfile.height || '175',
+                      eroticInterests: userProfile.eroticInterests || []
+                    }] : []).concat(profiles).filter(profile => {
                       if (profile.age < filters.minAge || profile.age > filters.maxAge) return false;
                       if (profile.distance > filters.distance) return false;
                       if (filters.gender !== 'visi' && profile.gender !== filters.gender) return false;
@@ -2358,7 +2413,32 @@ const PazintysPlatforma = () => {
               )}
 
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {profiles.filter(profile => {
+                {(profileComplete ? [{
+                  id: 'my-profile',
+                  name: userProfile.name,
+                  age: userProfile.age,
+                  city: userProfile.city,
+                  street: userProfile.street || '',
+                  house: userProfile.house || '',
+                  distance: 0.5,
+                  gender: userProfile.gender,
+                  bodyType: userProfile.bodyType || 'Vidutinis',
+                  height: String(userProfile.height || '175'),
+                  hairColor: userProfile.hairColor || '',
+                  eyeColor: userProfile.eyeColor || '',
+                  civilStatus: userProfile.civilStatus || '',
+                  smoking: userProfile.smoking || 'Ne',
+                  tattoos: userProfile.tattoos || 'Ne',
+                  piercing: userProfile.piercing || 'Ne',
+                  bio: userProfile.bio || '',
+                  interests: userProfile.interests || [],
+                  eroticInterests: userProfile.eroticInterests || [],
+                  photos: userProfile.photos || [],
+                  avatar: '👤',
+                  avatarBg: 'from-orange-400 to-orange-600',
+                  isOnline: true,
+                  status: { watching: false, liked: false, likedMe: false }
+                }] : []).concat(profiles).filter(profile => {
                   // Amžiaus filtras
                   if (profile.age < filters.minAge || profile.age > filters.maxAge) return false;
                   
@@ -3588,6 +3668,17 @@ const PazintysPlatforma = () => {
                   {savedSections.has('erotiniai-pomegiai-profilis') ? 'Išsaugota' : 'Išsaugoti pakeitimus'}
                 </button>
                 </div>
+
+                {/* Patvirtinti anketą – profilis atsiranda tarp narių */}
+                <div className="sticky bottom-0 bg-gray-800 pt-4 pb-2 border-t border-gray-700 -mx-3 sm:-mx-6 px-3 sm:px-6 mt-6">
+                  <button
+                    onClick={handleCompleteProfile}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 sm:py-4 rounded-lg text-base sm:text-lg"
+                  >
+                    Patvirtinti
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">Patvirtinus anketa bus matoma tarp kitų narių.</p>
+                </div>
               </div>
 
               {/* Nustatymai */}
@@ -3607,15 +3698,24 @@ const PazintysPlatforma = () => {
                   </label>
                 </div>
 
-                <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+                <button 
+                  onClick={() => setShowChangePasswordModal(true)}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+                >
                   Keisti slaptažodį
                 </button>
 
-                <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+                <button 
+                  onClick={() => setShowChangeEmailModal(true)}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+                >
                   Keisti el. paštą
                 </button>
 
-                <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+                <button 
+                  onClick={() => setShowDeleteAccountModal(true)}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+                >
                   Ištrinti paskyrą
                 </button>
               </div>
@@ -3648,11 +3748,17 @@ const PazintysPlatforma = () => {
               </label>
             </div>
 
-            <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+            <button 
+              onClick={() => { setShowSettings(false); setShowChangePasswordModal(true); }}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+            >
               Keisti slaptažodį
             </button>
 
-            <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+            <button 
+              onClick={() => { setShowSettings(false); setShowChangeEmailModal(true); }}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+            >
               Keisti el. paštą
             </button>
 
@@ -3666,9 +3772,84 @@ const PazintysPlatforma = () => {
               Keisti telefono numerį
             </button>
 
-            <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base">
+            <button 
+              onClick={() => { setShowSettings(false); setShowDeleteAccountModal(true); }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+            >
               Ištrinti paskyrą
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => { setShowChangePasswordModal(false); setChangePasswordCurrent(''); setChangePasswordNew(''); setChangePasswordConfirm(''); }}>
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Keisti slaptažodį</h2>
+            <div className="space-y-3">
+              <input type="password" value={changePasswordCurrent} onChange={e => setChangePasswordCurrent(e.target.value)} placeholder="Dabartinis slaptažodis" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+              <input type="password" value={changePasswordNew} onChange={e => setChangePasswordNew(e.target.value)} placeholder="Naujas slaptažodis" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+              <input type="password" value={changePasswordConfirm} onChange={e => setChangePasswordConfirm(e.target.value)} placeholder="Pakartokite naują slaptažodį" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => { setShowChangePasswordModal(false); setChangePasswordCurrent(''); setChangePasswordNew(''); setChangePasswordConfirm(''); }} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg">Atšaukti</button>
+              <button onClick={() => {
+                if (!changePasswordCurrent || !changePasswordNew || !changePasswordConfirm) { alert('Užpildykite visus laukus'); return; }
+                if (changePasswordNew !== changePasswordConfirm) { alert('Nauji slaptažodžiai nesutampa'); return; }
+                if (changePasswordNew.length < 6) { alert('Naujas slaptažodis turi būti bent 6 simbolių'); return; }
+                setShowChangePasswordModal(false); setChangePasswordCurrent(''); setChangePasswordNew(''); setChangePasswordConfirm(''); alert('Slaptažodis pakeistas.');
+              }} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg">Patvirtinti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Email Modal */}
+      {showChangeEmailModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => { setShowChangeEmailModal(false); setChangeEmailNew(''); setChangeEmailPassword(''); }}>
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Keisti el. paštą</h2>
+            <div className="space-y-3">
+              <input type="email" value={changeEmailNew} onChange={e => setChangeEmailNew(e.target.value)} placeholder="Naujas el. paštas" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+              <input type="password" value={changeEmailPassword} onChange={e => setChangeEmailPassword(e.target.value)} placeholder="Dabartinis slaptažodis" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white" />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => { setShowChangeEmailModal(false); setChangeEmailNew(''); setChangeEmailPassword(''); }} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg">Atšaukti</button>
+              <button onClick={() => {
+                if (!changeEmailNew.trim() || !changeEmailPassword) { alert('Užpildykite visus laukus'); return; }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(changeEmailNew)) { alert('Įveskite teisingą el. paštą'); return; }
+                setShowChangeEmailModal(false); setChangeEmailNew(''); setChangeEmailPassword(''); setUserProfile(p => ({ ...p, email: changeEmailNew })); alert('El. paštas pakeistas.');
+              }} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg">Patvirtinti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteAccountModal(false)}>
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-2">Ištrinti paskyrą</h2>
+            <p className="text-gray-400 text-sm mb-4">Ar tikrai norite ištrinti paskyrą? Visi duomenys bus pašalinti.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteAccountModal(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg">Atšaukti</button>
+              <button onClick={() => {
+                setShowDeleteAccountModal(false);
+                setIsLoggedIn(false);
+                setProfileComplete(false);
+                setSelectedProfile(null);
+                setActiveChat(null);
+                setUserProfile({ name: '', age: 18, city: '', gender: '', bodyType: '', height: '', hairColor: '', eyeColor: '', civilStatus: '', bio: '', interests: [], photos: [], street: '', house: '', eroticInterests: [], phone: '', email: '' });
+                setRegistrationData({ photos: [], name: '', gender: '', age: '', city: '', street: '', house: '', height: '', bodyType: '', civilStatus: '', hairColor: '', eyeColor: '', bio: '', hobbies: [], eroticInterests: [] });
+                setConversations([]);
+                setCredits(0);
+                setTotalMessagesSent(0);
+                setFreeMessages({});
+                setMeetingProposals(new Set());
+                alert('Paskyra ištrinta.');
+              }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">Ištrinti</button>
+            </div>
           </div>
         </div>
       )}
@@ -3853,7 +4034,8 @@ const PazintysPlatforma = () => {
                 ))}
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons (neparodome savo profilio – my-profile) */}
+              {selectedProfile.id !== 'my-profile' && (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-6">
                 <button 
                   onClick={() => toggleStatus(selectedProfile.id, 'watching')}
@@ -3884,12 +4066,13 @@ const PazintysPlatforma = () => {
                   {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     // Patikrinti, ar profilis užpildytas
                     if (!profileComplete) {
                       alert('Prašome pirmiausia užpildyti savo profilį. Be užpildytos anketos negalite rašyti žinučių.');
                       setShowProfileForm(true);
-                      setSelectedProfile(null); // Uždaryti profilio modalą
+                      setSelectedProfile(null);
                       return;
                     }
                     
@@ -3902,7 +4085,7 @@ const PazintysPlatforma = () => {
                         lastMessageTime: new Date()
                       }, ...conversations]);
                     }
-                    // Scroll į chat sekciją
+                    setSelectedProfile(null); // Uždaryti modalą, kad matytų pokalbį
                     setTimeout(() => {
                       const chatSection = document.getElementById('chat-section');
                       if (chatSection) {
@@ -3916,8 +4099,10 @@ const PazintysPlatforma = () => {
                   Rašyti
                 </button>
               </div>
+              )}
 
               {/* Susitikimo pasiūlymo Button */}
+              {selectedProfile.id !== 'my-profile' && (
               <div className="relative mb-6">
                 <button 
                   onClick={() => proposeMeeting(selectedProfile.id)}
@@ -3960,6 +4145,7 @@ const PazintysPlatforma = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* About */}
               <div className="mb-4 sm:mb-6">
