@@ -5,11 +5,11 @@
 // Get your keys from: https://dashboard.emailjs.com/admin
 // You can configure via environment variables or directly here
 export const emailJSConfig = {
-  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'your_service_id', // Replace with your EmailJS service ID
-  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'your_template_id', // Replace with your EmailJS template ID
-  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key', // Replace with your EmailJS public key
-  fromEmail: 'myliu67x@outlook.com', // Email from which verification emails are sent
-  enabled: import.meta.env.VITE_EMAILJS_ENABLED === 'true' || false // Set to true after configuring EmailJS
+  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_yhcznkk',
+  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_gjgci6e',
+  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '1yHxKRvZCfpOjjo4C',
+  fromEmail: 'myliu67x@outlook.com',
+  enabled: (import.meta.env.VITE_EMAILJS_ENABLED !== undefined ? import.meta.env.VITE_EMAILJS_ENABLED === 'true' : true) // EmailJS įjungtas
 };
 
 // Backend API Configuration (Requires backend)
