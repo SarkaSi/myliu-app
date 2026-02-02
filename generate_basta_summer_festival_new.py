@@ -121,7 +121,7 @@ basta_data = {
     "eye_color": "brown eyes",
 }
 
-BASE_SEED = 15003  # Trečios nuotraukos seed
+BASE_SEED = 25003  # Trečios nuotraukos seed - naujas seed, kad būtų skirtinga nuotrauka
 
 # Detalus tatuiruotės aprašymas
 TATTOO_DESCRIPTION = "tattoo on left arm: geometric mandala pattern in black ink, tattoo on right arm: detailed rose with thorns in black and red ink, tattoo on neck: small anchor in black ink, tattoo on left shoulder: music note in black ink, tattoo on right shoulder: small star in black ink, all tattoos clearly visible and in same positions"
@@ -129,8 +129,8 @@ TATTOO_DESCRIPTION = "tattoo on left arm: geometric mandala pattern in black ink
 # Stiprus negative prompt be nuogumo
 negative_prompt = "(Negative Realistic 3:1.0), nude, naked, topless, bare chest, exposed breasts, nipples, exposed genitals, no clothes, underwear visible, lingerie, bikini, swimsuit revealing, cleavage, nude body, naked body, hands, fingers, deformed hands, extra fingers, missing fingers, bad hands, malformed hands, worst hands, mutated hands, extra limbs, missing limbs, deformed limbs, worst anatomy, AI generated, artificial, fake, digital art, illustration, cartoon, anime, 3d render, painting, drawing"
 
-# Naujas prompt: sėdi ant asfalto kelio viduryje - aiškus ir detalų aprašymas
-prompt = f"realistic photograph, natural full body portrait of 29 year old punk rock woman, {basta_data['body_type']} body type, {basta_data['height']}, {basta_data['hair_color']} hair, {basta_data['eye_color']}, {TATTOO_DESCRIPTION}, sitting directly on asphalt road surface in the exact center middle of the street, legs visible, sitting cross-legged or with knees bent, bottom touching the asphalt road, wearing punk festival outfit with t-shirt and shorts or jeans, completely covered, high neckline, no skin exposure, no cleavage, festival setting during Lithuanian summer, sunny day, urban street environment, asphalt road texture clearly visible underneath and around her, road markings visible, street perspective showing she is in the middle of the road, full body visible from front, sitting pose on ground, realistic skin texture, natural imperfections like subtle freckles, wrinkles, messy colorful hair, same tattoos in same positions on body, fully clothed, conservative festival wear, real photo, authentic, documentary style, not AI art, high quality, detailed face, photorealistic"
+# Naujas prompt: sėdi ant asfalto kelio viduryje - labai detalų ir aiškus aprašymas
+prompt = f"realistic photograph, 29 year old punk rock woman with {basta_data['hair_color']} hair and {basta_data['eye_color']}, {basta_data['body_type']} body type, {basta_data['height']}, {TATTOO_DESCRIPTION}, sitting on asphalt road in the middle of the street, her bottom and legs touching the dark gray asphalt pavement, sitting pose with legs crossed or knees up, wearing complete punk festival clothing - t-shirt or tank top with high neckline and shorts or jeans, fully covered body, no exposed skin, no cleavage, festival atmosphere, Lithuanian summer, sunny bright day, urban street setting, asphalt road surface visible underneath her and extending to background, road center line markings visible, she is positioned in the center of the road, full body shot from front angle, messy colorful hair, natural skin with imperfections, freckles visible, same tattoos on arms and body in correct positions, conservative punk style clothing, real documentary photo style, authentic, not AI art, high quality, detailed face, photorealistic, street photography"
 
 if __name__ == "__main__":
     if not check_api_available():
