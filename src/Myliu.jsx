@@ -1815,21 +1815,15 @@ const PazintysPlatforma = () => {
   };
 
   const handleRegister = () => {
-    // Patikrinti, ar bent vienas laukas užpildytas
-    if (!registerEmail.trim() && !registerPhone.trim()) {
-      alert('Prašome užpildyti bent vieną: el. paštą arba telefono numerį');
+    // El. paštas privalomas
+    if (!registerEmail.trim()) {
+      alert('Prašome įvesti el. pašto adresą');
       return;
     }
 
-    // Validuoti el. paštą, jei užpildytas
-    if (registerEmail.trim() && !isEmail(registerEmail)) {
+    // Validuoti el. paštą
+    if (!isEmail(registerEmail)) {
       alert('Prašome įvesti teisingą el. pašto adresą');
-      return;
-    }
-
-    // Validuoti telefono numerį, jei užpildytas
-    if (registerPhone.trim() && !isPhone(registerPhone)) {
-      alert('Prašome įvesti teisingą telefono numerį');
       return;
     }
 
@@ -1852,66 +1846,42 @@ const PazintysPlatforma = () => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setStoredVerificationCode(code); // Išsaugoti kodą patikrinimui
     
-    const sentTo = [];
+    // Siųsti email (privalomas)
+    setIsSendingEmail(true);
+    setVerificationSentTo(['email']);
     
-    // Siųsti email, jei nurodytas
-    if (registerEmail.trim()) {
-      sentTo.push('email');
-      setIsSendingEmail(true);
-      
-      // Asinchroniškai siųsti email
-      sendVerificationEmail(registerEmail, code, registerEmail.split('@')[0] || 'Naudotojas')
-        .then(result => {
-          console.log('Email siuntimo rezultatas:', result);
-          setIsSendingEmail(false);
-          
-          if (result.success && !result.mock) {
-            // Tikras email išsiųstas sėkmingai
-            console.log(`✅ Email sėkmingai išsiųstas į ${registerEmail} iš myliu67x@outlook.com`);
-          } else if (result.mock) {
-            // Mock mode - development režimas
-            console.log(`⚠️ Email siuntimas mock režime. Kodas: ${code}`);
-            alert(`Email siuntimas mock režime. Patvirtinimo kodas: ${code}\n\nPastaba: Production režime sukonfigūruokite EmailJS arba Backend email siuntimą.`);
-          } else {
-            // Email siuntimas nepavyko
-            console.warn(`⚠️ Email siuntimo problema: ${result.message}`);
-            alert(`Klaida siunčiant email į ${registerEmail}: ${result.message || 'Nežinoma klaida'}\n\nPatvirtinimo kodas: ${code}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
-          }
-        })
-        .catch(error => {
-          console.error('Email siuntimo klaida:', error);
-          setIsSendingEmail(false);
-          // Net jei email nepavyko, tęsti registraciją (galima naudoti telefoną arba bandyti vėliau)
-          alert(`Nepavyko išsiųsti email į ${registerEmail}.\n\nPatvirtinimo kodas: ${code}\n\nKlaida: ${error.message || 'Nežinoma klaida'}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
-        });
-    }
-    
-    // SMS siuntimas (telefono numeriu) - simuliacija
-    if (registerPhone.trim()) {
-      sentTo.push('phone');
-      // SMS siuntimas čia - reikia integruoti SMS API arba backend
-      console.log('SMS siuntimas (simuliacija):', { phone: registerPhone, code });
-    }
+    // Asinchroniškai siųsti email
+    sendVerificationEmail(registerEmail, code, registerEmail.split('@')[0] || 'Naudotojas')
+      .then(result => {
+        console.log('Email siuntimo rezultatas:', result);
+        setIsSendingEmail(false);
+        
+        if (result.success && !result.mock) {
+          // Tikras email išsiųstas sėkmingai
+          console.log(`✅ Email sėkmingai išsiųstas į ${registerEmail} iš myliu67x@outlook.com`);
+        } else if (result.mock) {
+          // Mock mode - development režimas
+          console.log(`⚠️ Email siuntimas mock režime. Kodas: ${code}`);
+          alert(`Email siuntimas mock režime. Patvirtinimo kodas: ${code}\n\nPastaba: Production režime sukonfigūruokite EmailJS arba Backend email siuntimą.`);
+        } else {
+          // Email siuntimas nepavyko
+          console.warn(`⚠️ Email siuntimo problema: ${result.message}`);
+          alert(`Klaida siunčiant email į ${registerEmail}: ${result.message || 'Nežinoma klaida'}\n\nPatvirtinimo kodas: ${code}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
+        }
+      })
+      .catch(error => {
+        console.error('Email siuntimo klaida:', error);
+        setIsSendingEmail(false);
+        alert(`Nepavyko išsiųsti email į ${registerEmail}.\n\nPatvirtinimo kodas: ${code}\n\nKlaida: ${error.message || 'Nežinoma klaida'}\n\nPrašome patikrinti email adresą arba naudoti šį kodą testavimui.`);
+      });
     
     // Atidaryti patvirtinimo modalą
-    setVerificationSentTo(sentTo);
     setShowVerification(true);
     setShowRegisterModal(false);
     
     // Pranešimas vartotojui
-    if (registerEmail.trim() && registerPhone.trim()) {
-      // Ir email, ir telefonas
-      console.log(`Patvirtinimo kodas: ${code}`);
-      alert(`Patvirtinimo kodas siunčiamas į el. paštą ${registerEmail} ir telefoną ${registerPhone}.\n\nPrašome patikrinti el. paštą (taip pat patikrinkite spam folderį).`);
-    } else if (registerEmail.trim()) {
-      // Tik email
-      console.log(`Patvirtinimo kodas: ${code}`);
-      alert(`Patvirtinimo kodas siunčiamas į el. paštą ${registerEmail}.\n\nPrašome patikrinti el. paštą (taip pat patikrinkite spam folderį).`);
-    } else if (registerPhone.trim()) {
-      // Tik telefonas
-      console.log(`Patvirtinimo kodas: ${code}`);
-      alert(`Patvirtinimo kodas siunčiamas į telefoną ${registerPhone}.\n\nKodas (testavimui): ${code}`);
-    }
+    console.log(`Patvirtinimo kodas: ${code}`);
+    alert(`Patvirtinimo kodas siunčiamas į el. paštą ${registerEmail}.\n\nPrašome patikrinti el. paštą (taip pat patikrinkite spam folderį).`);
   };
 
   const handleVerifyCode = () => {
@@ -1930,7 +1900,6 @@ const PazintysPlatforma = () => {
     alert('Registracija sėkminga! Dabar galite prisijungti.');
     setShowVerification(false);
     setRegisterEmail('');
-    setRegisterPhone('');
     setRegisterPassword('');
     setRegisterConfirmPassword('');
     setVerificationCode('');
@@ -1946,8 +1915,9 @@ const PazintysPlatforma = () => {
       return;
     }
 
-    if (!isEmail(loginEmailOrPhone) && !isPhone(loginEmailOrPhone)) {
-      alert('Prašome įvesti teisingą el. pašto adresą arba telefono numerį');
+    // Prisijungimas tik per el. paštą
+    if (!isEmail(loginEmailOrPhone)) {
+      alert('Prašome įvesti teisingą el. pašto adresą');
       return;
     }
 
@@ -4458,22 +4428,13 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-gray-400">(nebūtinas)</span></label>
+                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-red-400">*</span></label>
                 <input
                   type="email"
                   value={registerEmail}
                   onChange={(e) => setRegisterEmail(e.target.value)}
                   placeholder="pvz: vardas@example.com"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(nebūtinas)</span></label>
-                <input
-                  type="tel"
-                  value={registerPhone}
-                  onChange={(e) => setRegisterPhone(e.target.value)}
-                  placeholder="pvz: +37061234567"
+                  required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
@@ -4527,11 +4488,7 @@ const PazintysPlatforma = () => {
               )}
               
               <p className="text-gray-300">
-                Įveskite 6 skaitmenų patvirtinimo kodą, kuris buvo išsiųstas į {verificationSentTo.includes('email') && verificationSentTo.includes('phone')
-                  ? 'el. paštą ir telefoną'
-                  : verificationSentTo.includes('email')
-                  ? 'el. paštą'
-                  : 'telefoną'}
+                Įveskite 6 skaitmenų patvirtinimo kodą, kuris buvo išsiųstas į el. paštą {registerEmail}
               </p>
               
               {registerEmail && (
@@ -4588,12 +4545,12 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">El. paštas arba telefono numeris</label>
+                <label className="block text-sm font-medium mb-2">El. paštas</label>
                 <input
-                  type="text"
+                  type="email"
                   value={loginEmailOrPhone}
                   onChange={(e) => setLoginEmailOrPhone(e.target.value)}
-                  placeholder="pvz: vardas@example.com arba +37061234567"
+                  placeholder="pvz: vardas@example.com"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
