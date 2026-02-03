@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sendVerificationEmail } from './emailService';
 
@@ -432,6 +432,15 @@ const PazintysPlatforma = () => {
     }
   }, [registrationData, profileComplete]);
 
+  // Išsaugoti visus narius į localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('myliu_allMembers', JSON.stringify(allMembers));
+    } catch (e) {
+      console.error('Error saving allMembers to localStorage:', e);
+    }
+  }, [allMembers]);
+
   // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
   useEffect(() => {
     if (selectedProfile && selectedProfile.id !== 'my-profile') {
@@ -630,6 +639,20 @@ const PazintysPlatforma = () => {
     minHeight: 150,
     maxHeight: 200,
     eroticInterest: 'visi'
+  });
+
+  // Visi užsiregistravę nariai (išsaugomi localStorage) – kad matytume kitus narius
+  const [allMembers, setAllMembers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('myliu_allMembers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.error('Error loading allMembers from localStorage:', e);
+    }
+    return [];
   });
 
   const [profiles, setProfiles] = useState([
@@ -1681,28 +1704,38 @@ const PazintysPlatforma = () => {
     { profileId: 6, visitTime: 'Vakar' }
   ]);
 
-  const getProfile = (id) => profiles.find(p => p.id === id);
+  const getProfile = (id) => profiles.find(p => p.id === id) || allMembers.find(p => p.id === id);
+
+  // Narių sąrašas be savo profilio (kiti nariai + statiniai profiliai)
+  const displayProfiles = useMemo(() =>
+    profiles.concat(allMembers).filter(p =>
+      p.id !== 'my-profile' && (!p.email || p.email !== (userProfile.email || ''))
+    ),
+    [profiles, allMembers, userProfile.email]
+  );
 
   const toggleStatus = (profileId, statusType) => {
+    const isMember = typeof profileId === 'string' && String(profileId).startsWith('member-');
+    if (isMember) {
+      setAllMembers(prev => prev.map(p => {
+        if (p.id === profileId) {
+          const newStatus = { ...(p.status || {}), [statusType]: !(p.status && p.status[statusType]) };
+          if (statusType === 'liked' && newStatus.liked) setNotifications(n => n + 1);
+          const updated = { ...p, status: newStatus };
+          setSelectedProfile(s => s && s.id === profileId ? updated : s);
+          return updated;
+        }
+        return p;
+      }));
+      return;
+    }
     setProfiles(prevProfiles => prevProfiles.map(p => {
       if (p.id === profileId) {
         const newStatus = { ...p.status };
         newStatus[statusType] = !newStatus[statusType];
-        
-        if (statusType === 'liked' && newStatus.liked) {
-          setNotifications(prev => prev + 1);
-        }
-        
+        if (statusType === 'liked' && newStatus.liked) setNotifications(prev => prev + 1);
         const updatedProfile = { ...p, status: newStatus };
-        
-        // Atnaujinti selectedProfile, jei jis atidarytas
-        setSelectedProfile(prevSelected => {
-          if (prevSelected && prevSelected.id === profileId) {
-            return updatedProfile;
-          }
-          return prevSelected;
-        });
-        
+        setSelectedProfile(prevSelected => (prevSelected && prevSelected.id === profileId) ? updatedProfile : prevSelected);
         return updatedProfile;
       }
       return p;
@@ -2165,7 +2198,22 @@ const PazintysPlatforma = () => {
       console.error('Error loading data from localStorage:', e);
     }
 
-    // Prisijungti
+    // Prisijungti – nustatome dabartinio vartotojo el. paštą ir jei yra allMembers, atkuriame jo profilį
+    const loginEmail = loginEmailOrPhone.trim();
+    try {
+      const membersJson = localStorage.getItem('myliu_allMembers');
+      const members = membersJson ? JSON.parse(membersJson) : [];
+      const member = Array.isArray(members) && members.find(m => m.email === loginEmail);
+      if (member) {
+        setUserProfile({ ...member, email: loginEmail });
+        const toSave = { ...member, email: loginEmail };
+        localStorage.setItem('myliu_userProfile', JSON.stringify(toSave));
+      } else {
+        setUserProfile(prev => ({ ...prev, email: loginEmail }));
+      }
+    } catch (e) {
+      setUserProfile(prev => ({ ...prev, email: loginEmail }));
+    }
     setIsLoggedIn(true);
     localStorage.setItem('myliu_isLoggedIn', 'true');
     alert('Prisijungimas sėkmingas!');
@@ -2214,6 +2262,40 @@ const PazintysPlatforma = () => {
     setProfileComplete(true);
     setShowProfileForm(false);
     setCurrentView('nariai');
+    
+    // Pridėti / atnaujinti šį narį į visų narių sąrašą (kad kiti matytų)
+    const memberId = 'member-' + (updatedProfile.email || updatedProfile.phone || String(Date.now()));
+    const memberCard = {
+      id: memberId,
+      email: updatedProfile.email || '',
+      name: updatedProfile.name,
+      age: updatedProfile.age,
+      city: updatedProfile.city,
+      street: updatedProfile.street || '',
+      house: updatedProfile.house || '',
+      distance: 0.5,
+      gender: updatedProfile.gender,
+      bodyType: updatedProfile.bodyType || 'Vidutinis',
+      height: String(updatedProfile.height || '175'),
+      hairColor: updatedProfile.hairColor || '',
+      eyeColor: updatedProfile.eyeColor || '',
+      civilStatus: updatedProfile.civilStatus || '',
+      smoking: updatedProfile.smoking || 'Ne',
+      tattoos: updatedProfile.tattoos || 'Ne',
+      piercing: updatedProfile.piercing || 'Ne',
+      bio: updatedProfile.bio || '',
+      interests: updatedProfile.interests || [],
+      eroticInterests: updatedProfile.eroticInterests || [],
+      photos: updatedProfile.photos || [],
+      avatar: '👤',
+      avatarBg: 'from-orange-400 to-orange-600',
+      isOnline: true,
+      status: { watching: false, liked: false, likedMe: false }
+    };
+    setAllMembers(prev => {
+      const rest = prev.filter(p => p.email !== (updatedProfile.email || ''));
+      return [...rest, memberCard];
+    });
     
     // Išsaugoti į localStorage (VISADA, net jei neprisijungęs)
     try {
@@ -2583,11 +2665,7 @@ const PazintysPlatforma = () => {
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-bold">Nariai</h2>
                   <p className="text-orange-500 text-base sm:text-lg">
-                    {(profileComplete ? [{
-                      id: 'my-profile', age: userProfile.age, distance: 0.5, gender: userProfile.gender,
-                      bodyType: userProfile.bodyType || 'Vidutinis', height: userProfile.height || '175',
-                      eroticInterests: userProfile.eroticInterests || []
-                    }] : []).concat(profiles).filter(profile => {
+                    {displayProfiles.filter(profile => {
                       if (profile.age < filters.minAge || profile.age > filters.maxAge) return false;
                       if (profile.distance > filters.distance) return false;
                       if (filters.gender !== 'visi' && profile.gender !== filters.gender) return false;
@@ -2774,32 +2852,7 @@ const PazintysPlatforma = () => {
               )}
 
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {(profileComplete ? [{
-                  id: 'my-profile',
-                  name: userProfile.name,
-                  age: userProfile.age,
-                  city: userProfile.city,
-                  street: userProfile.street || '',
-                  house: userProfile.house || '',
-                  distance: 0.5,
-                  gender: userProfile.gender,
-                  bodyType: userProfile.bodyType || 'Vidutinis',
-                  height: String(userProfile.height || '175'),
-                  hairColor: userProfile.hairColor || '',
-                  eyeColor: userProfile.eyeColor || '',
-                  civilStatus: userProfile.civilStatus || '',
-                  smoking: userProfile.smoking || 'Ne',
-                  tattoos: userProfile.tattoos || 'Ne',
-                  piercing: userProfile.piercing || 'Ne',
-                  bio: userProfile.bio || '',
-                  interests: userProfile.interests || [],
-                  eroticInterests: userProfile.eroticInterests || [],
-                  photos: userProfile.photos || [],
-                  avatar: '👤',
-                  avatarBg: 'from-orange-400 to-orange-600',
-                  isOnline: true,
-                  status: { watching: false, liked: false, likedMe: false }
-                }] : []).concat(profiles).filter(profile => {
+                {displayProfiles.filter(profile => {
                   // Amžiaus filtras
                   if (profile.age < filters.minAge || profile.age > filters.maxAge) return false;
                   
@@ -2945,7 +2998,7 @@ const PazintysPlatforma = () => {
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Stebiu</h2>
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {profiles.filter(p => p.status.watching).map(profile => (
+                {displayProfiles.filter(p => p.status?.watching).map(profile => (
                   <div key={profile.id} className="w-full sm:w-[280px] flex justify-center">
                     <ProfileCard 
                       profile={profile}
@@ -2963,7 +3016,7 @@ const PazintysPlatforma = () => {
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Myliu</h2>
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {profiles.filter(p => p.status.liked).map(profile => (
+                {displayProfiles.filter(p => p.status?.liked).map(profile => (
                   <div key={profile.id} className="w-full sm:w-[280px] flex justify-center">
                     <ProfileCard 
                       profile={profile}
@@ -2981,7 +3034,7 @@ const PazintysPlatforma = () => {
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Myli mane</h2>
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {profiles.filter(p => p.status.likedMe).map(profile => (
+                {displayProfiles.filter(p => p.status?.likedMe).map(profile => (
                   <div key={profile.id} className="w-full sm:w-[280px] flex justify-center">
                     <ProfileCard 
                       profile={profile}
