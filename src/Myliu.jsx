@@ -36,7 +36,6 @@ const PazintysPlatforma = () => {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPhone, setRegisterPhone] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
   const [loginEmailOrPhone, setLoginEmailOrPhone] = useState('');
@@ -434,7 +433,6 @@ const PazintysPlatforma = () => {
       setRegisterEmail('');
       setRegisterPassword('');
       setRegisterConfirmPassword('');
-      setRegisterPhone('');
       setVerificationCode('');
       setStoredVerificationCode(null);
       setVerificationSentTo([]);
@@ -1964,7 +1962,6 @@ const PazintysPlatforma = () => {
     setRegisterEmail('');
     setRegisterPassword('');
     setRegisterConfirmPassword('');
-    setRegisterPhone('');
     setShowVerification(false);
     setVerificationCode('');
     setStoredVerificationCode(null);
@@ -4739,16 +4736,6 @@ const PazintysPlatforma = () => {
                   onChange={(e) => setRegisterEmail(e.target.value)}
                   placeholder="pvz: vardas@example.com"
                   required
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(nebūtinas)</span></label>
-                <input
-                  type="tel"
-                  value={registerPhone}
-                  onChange={(e) => setRegisterPhone(e.target.value)}
-                  placeholder="pvz: +37061234567"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
