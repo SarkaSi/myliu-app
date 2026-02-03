@@ -22,7 +22,14 @@ const PazintysPlatforma = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [isRegistration, setIsRegistration] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Atkurti isLoggedIn iš localStorage
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem('myliu_isLoggedIn') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [registerEmail, setRegisterEmail] = useState('');
@@ -41,7 +48,14 @@ const PazintysPlatforma = () => {
   const [changePhonePassword, setChangePhonePassword] = useState('');
   const [changePhoneVerificationCode, setChangePhoneVerificationCode] = useState('');
   const [showChangePhoneVerification, setShowChangePhoneVerification] = useState(false);
-  const [profileComplete, setProfileComplete] = useState(false); // Ar anketos profilis patvirtintas
+  // Atkurti profileComplete iš localStorage
+  const [profileComplete, setProfileComplete] = useState(() => {
+    try {
+      return localStorage.getItem('myliu_profileComplete') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [showProfileForm, setShowProfileForm] = useState(false); // Anketos modalas po registracijos
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
@@ -264,50 +278,92 @@ const PazintysPlatforma = () => {
     });
   };
   
-  const [userProfile, setUserProfile] = useState({
-    name: 'Tomas',
-    age: 28,
-    city: 'Vilnius',
-    gender: 'Vyras',
-    bodyType: 'Vidutinis',
-    height: '180',
-    hairColor: 'Šviesiaplaukis',
-    eyeColor: 'Mėlyna',
-    civilStatus: 'Vienišius',
-    smoking: 'Ne',
-    tattoos: 'Ne',
-    piercing: 'Ne',
-    bio: 'Mėgstu keliauti, fotografuoti ir aktyviai leisti laiką.',
-    interests: ['Kelionės', 'Fotografija', 'Sportas', 'Muzika'],
-    photos: [],
-    isOnline: true,
-    street: '',
-    house: '',
-    eroticInterests: [],
-    phone: '+37061234567',
-    email: ''
+  // Atkurti userProfile iš localStorage arba naudoti default
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('myliu_userProfile');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading userProfile from localStorage:', e);
+    }
+    return {
+      name: 'Tomas',
+      age: 28,
+      city: 'Vilnius',
+      gender: 'Vyras',
+      bodyType: 'Vidutinis',
+      height: '180',
+      hairColor: 'Šviesiaplaukis',
+      eyeColor: 'Mėlyna',
+      civilStatus: 'Vienišius',
+      smoking: 'Ne',
+      tattoos: 'Ne',
+      piercing: 'Ne',
+      bio: 'Mėgstu keliauti, fotografuoti ir aktyviai leisti laiką.',
+      interests: ['Kelionės', 'Fotografija', 'Sportas', 'Muzika'],
+      photos: [],
+      isOnline: true,
+      street: '',
+      house: '',
+      eroticInterests: [],
+      phone: '+37061234567',
+      email: ''
+    };
   });
   
-  // Registration form state - initialized with userProfile data
-  const [registrationData, setRegistrationData] = useState(() => ({
-    photos: userProfile.photos || [],
-    name: userProfile.name || '',
-    gender: userProfile.gender || '',
-    age: userProfile.age?.toString() || '',
-    city: userProfile.city || '',
-    street: userProfile.street || '',
-    house: userProfile.house || '',
-    height: userProfile.height || '',
-    bodyType: userProfile.bodyType || '',
-    civilStatus: userProfile.civilStatus || '',
-    hairColor: userProfile.hairColor || '',
-    eyeColor: userProfile.eyeColor || '',
-    bio: userProfile.bio || '',
-    hobbies: userProfile.interests || [],
-    eroticInterests: userProfile.eroticInterests || []
-  }));
+  // Registration form state - initialized with userProfile data arba iš localStorage
+  const [registrationData, setRegistrationData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('myliu_registrationData');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading registrationData from localStorage:', e);
+    }
+    return {
+      photos: userProfile.photos || [],
+      name: userProfile.name || '',
+      gender: userProfile.gender || '',
+      age: userProfile.age?.toString() || '',
+      city: userProfile.city || '',
+      street: userProfile.street || '',
+      house: userProfile.house || '',
+      height: userProfile.height || '',
+      bodyType: userProfile.bodyType || '',
+      civilStatus: userProfile.civilStatus || '',
+      hairColor: userProfile.hairColor || '',
+      eyeColor: userProfile.eyeColor || '',
+      bio: userProfile.bio || '',
+      hobbies: userProfile.interests || [],
+      eroticInterests: userProfile.eroticInterests || []
+    };
+  });
   
-  // Sync registrationData when userProfile changes
+  // Automatiškai išsaugoti userProfile į localStorage kai jis keičiasi
+  useEffect(() => {
+    if (isLoggedIn) {
+      try {
+        localStorage.setItem('myliu_userProfile', JSON.stringify(userProfile));
+      } catch (e) {
+        console.error('Error saving userProfile to localStorage:', e);
+      }
+    }
+  }, [userProfile, isLoggedIn]);
+
+  // Automatiškai išsaugoti registrationData į localStorage kai jis keičiasi
+  useEffect(() => {
+    if (isLoggedIn) {
+      try {
+        localStorage.setItem('myliu_registrationData', JSON.stringify(registrationData));
+      } catch (e) {
+        console.error('Error saving registrationData to localStorage:', e);
+      }
+    }
+  }, [registrationData, isLoggedIn]);
+
   // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
   useEffect(() => {
     if (selectedProfile && selectedProfile.id !== 'my-profile') {
@@ -435,7 +491,13 @@ const PazintysPlatforma = () => {
     }
   }, [tooltipPosition, showMeetingTooltip]);
 
+  // Sync registrationData when userProfile changes (bet tik jei nėra localStorage duomenų)
   useEffect(() => {
+    // Ne sync'inti jei jau yra localStorage duomenys (kad neperrašytų)
+    const hasLocalStorageData = localStorage.getItem('myliu_registrationData');
+    if (hasLocalStorageData) {
+      return;
+    }
     setRegistrationData({
       photos: userProfile.photos || [],
       name: userProfile.name || '',
@@ -1889,8 +1951,28 @@ const PazintysPlatforma = () => {
       return;
     }
 
+    // Atkurti duomenis iš localStorage
+    try {
+      const savedProfile = localStorage.getItem('myliu_userProfile');
+      const savedProfileComplete = localStorage.getItem('myliu_profileComplete');
+      const savedRegistrationData = localStorage.getItem('myliu_registrationData');
+      
+      if (savedProfile) {
+        setUserProfile(JSON.parse(savedProfile));
+      }
+      if (savedProfileComplete === 'true') {
+        setProfileComplete(true);
+      }
+      if (savedRegistrationData) {
+        setRegistrationData(JSON.parse(savedRegistrationData));
+      }
+    } catch (e) {
+      console.error('Error loading data from localStorage:', e);
+    }
+
     // Prisijungti
     setIsLoggedIn(true);
+    localStorage.setItem('myliu_isLoggedIn', 'true');
     alert('Prisijungimas sėkmingas!');
     setShowLoginModal(false);
     setLoginEmailOrPhone('');
@@ -1909,27 +1991,44 @@ const PazintysPlatforma = () => {
       alert(`Prašome užpildyti privalomus laukus:\n${errors.join(', ')}`);
       return;
     }
-    setUserProfile(prev => ({
-      ...prev,
-      name: registrationData.name?.trim() || prev.name,
-      gender: registrationData.gender || prev.gender,
-      age: parseInt(registrationData.age, 10) || prev.age,
-      city: registrationData.city?.trim() || prev.city,
-      street: registrationData.street?.trim() || prev.street,
-      house: registrationData.house?.trim() || prev.house,
-      height: registrationData.height || prev.height,
-      bodyType: registrationData.bodyType || prev.bodyType,
-      civilStatus: registrationData.civilStatus || prev.civilStatus,
-      hairColor: registrationData.hairColor || prev.hairColor,
-      eyeColor: registrationData.eyeColor || prev.eyeColor,
-      bio: registrationData.bio || prev.bio,
-      interests: registrationData.hobbies || prev.interests,
-      eroticInterests: registrationData.eroticInterests || prev.eroticInterests,
-      photos: registrationData.photos || prev.photos
-    }));
+    const updatedProfile = {
+      name: registrationData.name?.trim() || userProfile.name,
+      gender: registrationData.gender || userProfile.gender,
+      age: parseInt(registrationData.age, 10) || userProfile.age,
+      city: registrationData.city?.trim() || userProfile.city,
+      street: registrationData.street?.trim() || userProfile.street,
+      house: registrationData.house?.trim() || userProfile.house,
+      height: registrationData.height || userProfile.height,
+      bodyType: registrationData.bodyType || userProfile.bodyType,
+      civilStatus: registrationData.civilStatus || userProfile.civilStatus,
+      hairColor: registrationData.hairColor || userProfile.hairColor,
+      eyeColor: registrationData.eyeColor || userProfile.eyeColor,
+      bio: registrationData.bio || userProfile.bio,
+      interests: registrationData.hobbies || userProfile.interests,
+      eroticInterests: registrationData.eroticInterests || userProfile.eroticInterests,
+      photos: registrationData.photos || userProfile.photos,
+      isOnline: userProfile.isOnline !== undefined ? userProfile.isOnline : true,
+      smoking: userProfile.smoking || 'Ne',
+      tattoos: userProfile.tattoos || 'Ne',
+      piercing: userProfile.piercing || 'Ne',
+      phone: userProfile.phone || '',
+      email: userProfile.email || ''
+    };
+    
+    setUserProfile(updatedProfile);
     setProfileComplete(true);
     setShowProfileForm(false);
     setCurrentView('nariai');
+    
+    // Išsaugoti į localStorage
+    try {
+      localStorage.setItem('myliu_userProfile', JSON.stringify(updatedProfile));
+      localStorage.setItem('myliu_profileComplete', 'true');
+      localStorage.setItem('myliu_registrationData', JSON.stringify(registrationData));
+    } catch (e) {
+      console.error('Error saving to localStorage:', e);
+    }
+    
     alert('Anketa patvirtinta! Jūsų profilis dabar matomas tarp narių.');
   };
 
@@ -2159,7 +2258,17 @@ const PazintysPlatforma = () => {
                 <span className="sm:hidden">R</span>
               </button>
               <button
-                onClick={() => isLoggedIn ? setIsLoggedIn(false) : setShowLoginModal(true)}
+                onClick={() => {
+                  if (isLoggedIn) {
+                    setIsLoggedIn(false);
+                    localStorage.removeItem('myliu_isLoggedIn');
+                    localStorage.removeItem('myliu_userProfile');
+                    localStorage.removeItem('myliu_profileComplete');
+                    localStorage.removeItem('myliu_registrationData');
+                  } else {
+                    setShowLoginModal(true);
+                  }
+                }}
                 className={`px-1.5 sm:px-4 py-1 sm:py-2.5 text-[10px] sm:text-base font-medium rounded-lg border-2 border-orange-500 transition-colors ${
                   isLoggedIn 
                     ? 'bg-orange-300 hover:bg-orange-400 text-gray-900' 
@@ -3858,7 +3967,17 @@ const PazintysPlatforma = () => {
               <button onClick={() => {
                 if (!changeEmailNew.trim() || !changeEmailPassword) { alert('Užpildykite visus laukus'); return; }
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(changeEmailNew)) { alert('Įveskite teisingą el. paštą'); return; }
-                setShowChangeEmailModal(false); setChangeEmailNew(''); setChangeEmailPassword(''); setUserProfile(p => ({ ...p, email: changeEmailNew })); alert('El. paštas pakeistas.');
+                const updatedProfile = { ...userProfile, email: changeEmailNew };
+                setUserProfile(updatedProfile);
+                try {
+                  localStorage.setItem('myliu_userProfile', JSON.stringify(updatedProfile));
+                } catch (e) {
+                  console.error('Error saving to localStorage:', e);
+                }
+                setShowChangeEmailModal(false);
+                setChangeEmailNew('');
+                setChangeEmailPassword('');
+                alert('El. paštas pakeistas.');
               }} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg">Patvirtinti</button>
             </div>
           </div>
@@ -3886,6 +4005,11 @@ const PazintysPlatforma = () => {
                 setTotalMessagesSent(0);
                 setFreeMessages({});
                 setMeetingProposals(new Set());
+                // Išvalyti localStorage
+                localStorage.removeItem('myliu_isLoggedIn');
+                localStorage.removeItem('myliu_userProfile');
+                localStorage.removeItem('myliu_profileComplete');
+                localStorage.removeItem('myliu_registrationData');
                 alert('Paskyra ištrinta.');
               }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">Ištrinti</button>
             </div>
@@ -4002,7 +4126,13 @@ const PazintysPlatforma = () => {
                         return;
                       }
                       // Simuliuoti telefono numerio keitimą
-                      setUserProfile({...userProfile, phone: changePhoneInput});
+                      const updatedProfile = {...userProfile, phone: changePhoneInput};
+                      setUserProfile(updatedProfile);
+                      try {
+                        localStorage.setItem('myliu_userProfile', JSON.stringify(updatedProfile));
+                      } catch (e) {
+                        console.error('Error saving to localStorage:', e);
+                      }
                       alert('Telefono numeris sėkmingai pakeistas');
                       setShowChangePhoneModal(false);
                       setChangePhoneInput('');
