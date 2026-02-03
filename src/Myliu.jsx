@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sendVerificationEmail } from './emailService';
 
@@ -1959,40 +1960,40 @@ const PazintysPlatforma = () => {
 
   // Naujai registruojantis – registracijos forma ir anketa turi būti tuščios
   const openRegistrationModal = () => {
-    setRegisterEmail('');
-    setRegisterPassword('');
-    setRegisterConfirmPassword('');
-    setShowVerification(false);
-    setVerificationCode('');
-    setStoredVerificationCode(null);
-    setVerificationSentTo([]);
-    setRegistrationData({
-      photos: [],
-      name: '',
-      gender: '',
-      age: '',
-      city: '',
-      street: '',
-      house: '',
-      height: '',
-      bodyType: '',
-      civilStatus: '',
-      hairColor: '',
-      eyeColor: '',
-      bio: '',
-      hobbies: [],
-      eroticInterests: []
-    });
     try {
       localStorage.removeItem('myliu_registrationData');
       localStorage.removeItem('myliu_registrationData_backup');
     } catch (e) {
       console.error('Error clearing registrationData from localStorage:', e);
     }
-    // Atidaryti modalą kitame cikle, kad React spėtų pritaikyti išvalymą prieš renderinant
-    requestAnimationFrame(() => {
-      setShowRegisterModal(true);
+    // flushSync priverčia React iš karto pritaikyti išvalymą – tik tada atidarome modalą
+    flushSync(() => {
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterConfirmPassword('');
+      setVerificationCode('');
+      setStoredVerificationCode(null);
+      setVerificationSentTo([]);
+      setShowVerification(false);
+      setRegistrationData({
+        photos: [],
+        name: '',
+        gender: '',
+        age: '',
+        city: '',
+        street: '',
+        house: '',
+        height: '',
+        bodyType: '',
+        civilStatus: '',
+        hairColor: '',
+        eyeColor: '',
+        bio: '',
+        hobbies: [],
+        eroticInterests: []
+      });
     });
+    setShowRegisterModal(true);
   };
 
   const handleRegister = () => {
