@@ -4428,13 +4428,23 @@ const PazintysPlatforma = () => {
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-red-400">*</span></label>
+                <label className="block text-sm font-medium mb-2">El. paštas <span className="text-red-400">(būtinas)</span></label>
                 <input
                   type="email"
                   value={registerEmail}
                   onChange={(e) => setRegisterEmail(e.target.value)}
                   placeholder="pvz: vardas@example.com"
                   required
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Telefono numeris <span className="text-gray-400">(nebūtinas)</span></label>
+                <input
+                  type="tel"
+                  value={registerPhone}
+                  onChange={(e) => setRegisterPhone(e.target.value)}
+                  placeholder="pvz: +37061234567"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
