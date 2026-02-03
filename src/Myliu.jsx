@@ -561,9 +561,13 @@ const PazintysPlatforma = () => {
 
   // Sync registrationData when userProfile changes (bet TIK jei registrationData tuščias ir nėra localStorage)
   // SVARBU: Šis useEffect NIEKADA neperrašo esamų duomenų!
+  // Nedaryti sync kai atidaryta registracijos forma – naujas narys turi matyti tuščią anketą
   useEffect(() => {
     // Praleisti pirmą render'į
     if (isInitialMount.current) {
+      return;
+    }
+    if (showRegisterModal || showVerification) {
       return;
     }
     
@@ -615,7 +619,7 @@ const PazintysPlatforma = () => {
         eroticInterests: userProfile.eroticInterests || []
       });
     }
-  }, [userProfile, profileComplete, registrationData]);
+  }, [userProfile, profileComplete, registrationData, showRegisterModal, showVerification]);
 
   const [filters, setFilters] = useState({
     minAge: 18,
@@ -1914,6 +1918,42 @@ const PazintysPlatforma = () => {
     return /^\+?[0-9]{8,15}$/.test(str.replace(/\s/g, ''));
   };
 
+  // Naujai registruojantis – registracijos forma ir anketa turi būti tuščios
+  const openRegistrationModal = () => {
+    setRegisterEmail('');
+    setRegisterPassword('');
+    setRegisterConfirmPassword('');
+    setRegisterPhone('');
+    setShowVerification(false);
+    setVerificationCode('');
+    setStoredVerificationCode(null);
+    setVerificationSentTo([]);
+    setRegistrationData({
+      photos: [],
+      name: '',
+      gender: '',
+      age: '',
+      city: '',
+      street: '',
+      house: '',
+      height: '',
+      bodyType: '',
+      civilStatus: '',
+      hairColor: '',
+      eyeColor: '',
+      bio: '',
+      hobbies: [],
+      eroticInterests: []
+    });
+    try {
+      localStorage.removeItem('myliu_registrationData');
+      localStorage.removeItem('myliu_registrationData_backup');
+    } catch (e) {
+      console.error('Error clearing registrationData from localStorage:', e);
+    }
+    setShowRegisterModal(true);
+  };
+
   const handleRegister = () => {
     // El. paštas privalomas
     if (!registerEmail.trim()) {
@@ -2424,7 +2464,7 @@ const PazintysPlatforma = () => {
             </button>
             <div className="flex items-center gap-0.5 sm:gap-3">
               <button
-                onClick={() => setShowRegisterModal(true)}
+                onClick={openRegistrationModal}
                 className="px-1.5 sm:px-4 py-1 sm:py-2.5 bg-gray-700 hover:bg-gray-600 text-[10px] sm:text-base font-medium rounded-lg border-2 border-orange-500 transition-colors"
               >
                 <span className="hidden sm:inline">Reg</span>
@@ -4788,7 +4828,7 @@ const PazintysPlatforma = () => {
                 <button
                   onClick={() => {
                     setShowLoginModal(false);
-                    setShowRegisterModal(true);
+                    openRegistrationModal();
                   }}
                   className="text-orange-500 hover:text-orange-400"
                 >
