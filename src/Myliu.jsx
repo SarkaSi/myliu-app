@@ -308,6 +308,31 @@ const PazintysPlatforma = () => {
   }));
   
   // Sync registrationData when userProfile changes
+  // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
+  useEffect(() => {
+    if (selectedProfile && selectedProfile.id !== 'my-profile') {
+      // Patikrinti, ar profilis užpildytas
+      if (!profileComplete) {
+        return; // Neleisti sukurti pokalbio jei profilis neužpildytas
+      }
+      
+      // Sukurti pokalbį jei jo nėra
+      const existingConv = conversations.find(c => c.profileId === selectedProfile.id);
+      if (!existingConv) {
+        setConversations(prev => [{
+          profileId: selectedProfile.id,
+          messages: [],
+          lastMessageTime: new Date()
+        }, ...prev]);
+      }
+      
+      // Nustatyti activeChat
+      if (activeChat !== selectedProfile.id) {
+        setActiveChat(selectedProfile.id);
+      }
+    }
+  }, [selectedProfile?.id, profileComplete]);
+
   // Auto-scroll į chat sekciją, kai ji atsidaro
   useEffect(() => {
     if (activeChat && selectedProfile && activeChat === selectedProfile.id) {
@@ -1587,13 +1612,22 @@ const PazintysPlatforma = () => {
       return;
     }
     
-    if (!messageInput.trim() || !activeChat) return;
+    // Patikrinti, ar profilis užpildytas
+    if (!profileComplete) {
+      alert('Prašome pirmiausia užpildyti savo profilį. Be užpildytos anketos negalite rašyti žinučių.');
+      setShowProfileForm(true);
+      return;
+    }
     
-    const conversation = conversations.find(c => c.profileId === activeChat);
+    // Naudoti activeChat arba selectedProfile.id jei activeChat nėra nustatytas
+    const chatProfileId = activeChat || (selectedProfile && selectedProfile.id !== 'my-profile' ? selectedProfile.id : null);
+    if (!messageInput.trim() || !chatProfileId) return;
+    
+    const conversation = conversations.find(c => c.profileId === chatProfileId);
     const isFirstMessage = !conversation;
     
     // Patikrinti, ar yra nemokamų žinučių šiam nariui (iš susitikimo pasiūlymo)
-    const freeMessagesCount = freeMessages[activeChat] || 0;
+    const freeMessagesCount = freeMessages[chatProfileId] || 0;
     const hasFreeMessages = freeMessagesCount > 0;
     
     // Patikrinti, ar dar yra bandomojo laikotarpio žinučių
@@ -1635,7 +1669,7 @@ const PazintysPlatforma = () => {
 
     if (conversation) {
       setConversations(prevConversations => prevConversations.map(c => {
-        if (c.profileId === activeChat) {
+        if (c.profileId === chatProfileId) {
           return {
             ...c,
             messages: [...c.messages, newMessage],
@@ -1646,10 +1680,15 @@ const PazintysPlatforma = () => {
       }));
     } else {
       setConversations(prevConversations => [{
-        profileId: activeChat,
+        profileId: chatProfileId,
         messages: [newMessage],
         lastMessageTime: new Date()
       }, ...prevConversations]);
+    }
+    
+    // Užtikrinti kad activeChat būtų nustatytas
+    if (!activeChat || activeChat !== chatProfileId) {
+      setActiveChat(chatProfileId);
     }
 
     setMessageInput('');
@@ -1668,7 +1707,7 @@ const PazintysPlatforma = () => {
         'Kaip laikaisi?',
         'Smagu susipažinti!',
         'Dėkui už žinutę!',
-        'Taip pat mėgstu ' + (getProfile(activeChat)?.interests[0] || 'keliones') + '!'
+        'Taip pat mėgstu ' + (getProfile(chatProfileId)?.interests[0] || 'keliones') + '!'
       ];
       
       const reply = {
@@ -1679,7 +1718,7 @@ const PazintysPlatforma = () => {
       };
 
       setConversations(prevConversations => prevConversations.map(c => {
-        if (c.profileId === activeChat) {
+        if (c.profileId === chatProfileId) {
           return {
             ...c,
             messages: [...c.messages, reply],
@@ -4065,85 +4104,48 @@ const PazintysPlatforma = () => {
                   </svg>
                   {selectedProfile.status.liked ? 'Myliu' : 'Mylėti'}
                 </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Patikrinti, ar profilis užpildytas
-                    if (!profileComplete) {
-                      alert('Prašome pirmiausia užpildyti savo profilį. Be užpildytos anketos negalite rašyti žinučių.');
-                      setShowProfileForm(true);
-                      setSelectedProfile(null);
-                      return;
-                    }
-                    
-                    setActiveChat(selectedProfile.id);
-                    const existingConv = conversations.find(c => c.profileId === selectedProfile.id);
-                    if (!existingConv) {
-                      setConversations([{
-                        profileId: selectedProfile.id,
-                        messages: [],
-                        lastMessageTime: new Date()
-                      }, ...conversations]);
-                    }
-                    setSelectedProfile(null); // Uždaryti modalą, kad matytų pokalbį
-                    setTimeout(() => {
-                      const chatSection = document.getElementById('chat-section');
-                      if (chatSection) {
-                        chatSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                      }
-                    }, 100);
-                  }}
-                  className="flex-1 px-6 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all border-2 border-orange-500 bg-gray-800 text-orange-500 hover:bg-orange-500/10"
-                >
-                  <MessageCircle size={20} />
-                  Rašyti
-                </button>
-              </div>
-              )}
-
-              {/* Susitikimo pasiūlymo Button */}
-              {selectedProfile.id !== 'my-profile' && (
-              <div className="relative mb-6">
-                <button 
-                  onClick={() => proposeMeeting(selectedProfile.id)}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = 'rgb(200, 20, 35)';
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: null });
-                    setShowMeetingTooltip(true);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'rgb(182, 14, 27)';
-                    setShowMeetingTooltip(false);
-                  }}
-                  className="w-full text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
-                  style={{ backgroundColor: 'rgb(182, 14, 27)' }}
-                >
-                  <Heart size={20} fill="currentColor" />
-                  Pasiūlyti susitikimą
-                </button>
-                {showMeetingTooltip && tooltipPosition && tooltipPosition.left > 0 && (
-                  <div 
-                    className="fixed bg-gray-800 border-2 border-red-600 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
-                    style={{
-                      top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
-                      left: `${tooltipStyle?.left || tooltipPosition.left}px`,
-                      transform: tooltipStyle?.transform || 'translateX(-50%)',
-                      maxWidth: 'calc(100vw - 1rem)',
-                      width: 'max-content',
-                      minWidth: '180px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      maxHeight: 'calc(100vh - 1rem)',
-                      overflowY: 'auto'
+                <div className="relative flex-1">
+                  <button 
+                    onClick={() => proposeMeeting(selectedProfile.id)}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = 'rgb(200, 20, 35)';
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setTooltipPosition({ top: rect.bottom, left: rect.left + rect.width / 2, profileId: null });
+                      setShowMeetingTooltip(true);
                     }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'rgb(182, 14, 27)';
+                      setShowMeetingTooltip(false);
+                    }}
+                    className="w-full text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
+                    style={{ backgroundColor: 'rgb(182, 14, 27)' }}
                   >
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-red-600"></div>
-                    <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words px-1">
-                      Siųsti rožių puokštę ir pasiūlyti susitikimą (100 kreditų)
-                    </p>
-                  </div>
-                )}
+                    <Heart size={20} fill="currentColor" />
+                    Susitinkam
+                  </button>
+                  {showMeetingTooltip && tooltipPosition && tooltipPosition.left > 0 && (
+                    <div 
+                      className="fixed bg-gray-800 border-2 border-red-600 rounded-lg p-2 sm:p-3 shadow-2xl z-[100] tooltip-fade-in pointer-events-none"
+                      style={{
+                        top: `${tooltipStyle?.top || tooltipPosition.top + 8}px`,
+                        left: `${tooltipStyle?.left || tooltipPosition.left}px`,
+                        transform: tooltipStyle?.transform || 'translateX(-50%)',
+                        maxWidth: 'calc(100vw - 1rem)',
+                        width: 'max-content',
+                        minWidth: '180px',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxHeight: 'calc(100vh - 1rem)',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-red-600"></div>
+                      <p className="text-white text-xs sm:text-sm text-center whitespace-normal break-words px-1">
+                        Siųsti rožių puokštę ir pasiūlyti susitikimą (100 kreditų)
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
               )}
 
@@ -4238,8 +4240,8 @@ const PazintysPlatforma = () => {
                 </div>
               )}
 
-              {/* Chat Section */}
-              {activeChat === selectedProfile.id && (
+              {/* Chat Section - visada matomas kai atidarytas profilis (išskyrus savo profilį) */}
+              {selectedProfile.id !== 'my-profile' && (
                 <div className="border-t border-gray-700 pt-4 sm:pt-6 mt-4 sm:mt-6" id="chat-section">
                   <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Pokalbis</h3>
                   <div className="bg-gray-900 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 h-48 sm:h-64 overflow-auto" id="chat-messages-container">
