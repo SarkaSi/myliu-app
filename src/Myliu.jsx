@@ -37,6 +37,7 @@ const PazintysPlatforma = () => {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [registerFormKey, setRegisterFormKey] = useState(0); // keičiamas atidarant – forma remountinama tuščia
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginFormKey, setLoginFormKey] = useState(0); // keičiamas atidarant – forma tuščia
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
@@ -442,6 +443,16 @@ const PazintysPlatforma = () => {
     }
     prevShowRegisterModal.current = showRegisterModal;
   }, [showRegisterModal]);
+
+  // Kai prisijungimo modalas tik atsidaro – išvalyti formą
+  const prevShowLoginModal = useRef(false);
+  useLayoutEffect(() => {
+    if (showLoginModal && !prevShowLoginModal.current) {
+      setLoginEmailOrPhone('');
+      setLoginPassword('');
+    }
+    prevShowLoginModal.current = showLoginModal;
+  }, [showLoginModal]);
 
   // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
   useEffect(() => {
@@ -1815,7 +1826,7 @@ const PazintysPlatforma = () => {
     // Tikrinti, ar vartotojas prisijungęs
     if (!isLoggedIn) {
       alert('Prašome prisijungti, kad galėtumėte siųsti žinutes.');
-      setShowLoginModal(true);
+      openLoginModal();
       return;
     }
     
@@ -1998,6 +2009,16 @@ const PazintysPlatforma = () => {
     setShowRegisterModal(true);
   };
 
+  // Prisijungimo forma – atidarant visada tuščia (kaip registracijos)
+  const openLoginModal = () => {
+    flushSync(() => {
+      setLoginFormKey(k => k + 1);
+      setLoginEmailOrPhone('');
+      setLoginPassword('');
+    });
+    setShowLoginModal(true);
+  };
+
   const handleRegister = () => {
     // El. paštas privalomas
     if (!registerEmail.trim()) {
@@ -2090,7 +2111,7 @@ const PazintysPlatforma = () => {
     setStoredVerificationCode(null);
     setVerificationSentTo([]);
     setIsSendingEmail(false);
-    setShowLoginModal(true);
+    openLoginModal();
   };
 
   const handleLogin = () => {
@@ -2572,7 +2593,7 @@ const PazintysPlatforma = () => {
                     localStorage.removeItem('myliu_profileComplete');
                     localStorage.removeItem('myliu_registrationData');
                   } else {
-                    setShowLoginModal(true);
+                    openLoginModal();
                   }
                 }}
                 className={`px-1.5 sm:px-4 py-1 sm:py-2.5 text-[10px] sm:text-base font-medium rounded-lg border-2 border-orange-500 transition-colors ${
@@ -4845,7 +4866,7 @@ const PazintysPlatforma = () => {
       {/* Login Modal */}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowLoginModal(false)}>
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
+          <div key={loginFormKey} className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-bold">Prisijungti</h2>
               <button onClick={() => setShowLoginModal(false)} className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-full">
@@ -4861,6 +4882,7 @@ const PazintysPlatforma = () => {
                   value={loginEmailOrPhone}
                   onChange={(e) => setLoginEmailOrPhone(e.target.value)}
                   placeholder="pvz: vardas@example.com"
+                  autoComplete="off"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
@@ -4871,6 +4893,7 @@ const PazintysPlatforma = () => {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Įveskite slaptažodį"
+                  autoComplete="off"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
