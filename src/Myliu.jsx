@@ -427,6 +427,22 @@ const PazintysPlatforma = () => {
     }
   }, [registrationData, profileComplete]);
 
+  // Kai registracijos modalas tik atsidaro (false → true) – išvalyti formą, kad būtų visada tuščia
+  const prevShowRegisterModal = useRef(false);
+  useEffect(() => {
+    if (showRegisterModal && !prevShowRegisterModal.current) {
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterConfirmPassword('');
+      setRegisterPhone('');
+      setVerificationCode('');
+      setStoredVerificationCode(null);
+      setVerificationSentTo([]);
+      setShowVerification(false);
+    }
+    prevShowRegisterModal.current = showRegisterModal;
+  }, [showRegisterModal]);
+
   // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
   useEffect(() => {
     if (selectedProfile && selectedProfile.id !== 'my-profile') {
