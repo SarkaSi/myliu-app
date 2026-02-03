@@ -38,6 +38,7 @@ const PazintysPlatforma = () => {
   const [registerFormKey, setRegisterFormKey] = useState(0); // keičiamas atidarant – forma remountinama tuščia
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginFormKey, setLoginFormKey] = useState(0); // keičiamas atidarant – forma tuščia
+  const [loginInputsLocked, setLoginInputsLocked] = useState(false); // readOnly kol vartotojas nepaspaudė – apsauga nuo autofill
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
@@ -2013,6 +2014,7 @@ const PazintysPlatforma = () => {
   const openLoginModal = () => {
     flushSync(() => {
       setLoginFormKey(k => k + 1);
+      setLoginInputsLocked(true); // readOnly kol vartotojas nefokusuoja – naršyklė nepripildo
       setLoginEmailOrPhone('');
       setLoginPassword('');
     });
@@ -4881,8 +4883,10 @@ const PazintysPlatforma = () => {
                   type="email"
                   value={loginEmailOrPhone}
                   onChange={(e) => setLoginEmailOrPhone(e.target.value)}
+                  onFocus={() => setLoginInputsLocked(false)}
                   placeholder="pvz: vardas@example.com"
                   autoComplete="off"
+                  readOnly={loginInputsLocked}
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
@@ -4892,8 +4896,10 @@ const PazintysPlatforma = () => {
                   type="password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
+                  onFocus={() => setLoginInputsLocked(false)}
                   placeholder="Įveskite slaptažodį"
                   autoComplete="off"
+                  readOnly={loginInputsLocked}
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
