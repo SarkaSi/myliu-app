@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sendVerificationEmail } from './emailService';
 
@@ -426,9 +426,9 @@ const PazintysPlatforma = () => {
     }
   }, [registrationData, profileComplete]);
 
-  // Kai registracijos modalas tik atsidaro (false → true) – išvalyti formą, kad būtų visada tuščia
+  // Kai registracijos modalas tik atsidaro – išvalyti formą prieš paint (useLayoutEffect)
   const prevShowRegisterModal = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (showRegisterModal && !prevShowRegisterModal.current) {
       setRegisterEmail('');
       setRegisterPassword('');
@@ -1989,7 +1989,10 @@ const PazintysPlatforma = () => {
     } catch (e) {
       console.error('Error clearing registrationData from localStorage:', e);
     }
-    setShowRegisterModal(true);
+    // Atidaryti modalą kitame cikle, kad React spėtų pritaikyti išvalymą prieš renderinant
+    requestAnimationFrame(() => {
+      setShowRegisterModal(true);
+    });
   };
 
   const handleRegister = () => {
