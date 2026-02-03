@@ -35,6 +35,7 @@ const PazintysPlatforma = () => {
     }
   });
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerFormKey, setRegisterFormKey] = useState(0); // keičiamas atidarant – forma remountinama tuščia
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
@@ -1968,6 +1969,7 @@ const PazintysPlatforma = () => {
     }
     // flushSync priverčia React iš karto pritaikyti išvalymą – tik tada atidarome modalą
     flushSync(() => {
+      setRegisterFormKey(k => k + 1); // naujas key – forma remountinama
       setRegisterEmail('');
       setRegisterPassword('');
       setRegisterConfirmPassword('');
@@ -4723,7 +4725,7 @@ const PazintysPlatforma = () => {
       {/* Register Modal */}
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowRegisterModal(false)}>
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+          <div key={registerFormKey} className="bg-gray-800 rounded-lg max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-xl sm:text-2xl font-bold">Registracija</h2>
               <button onClick={() => setShowRegisterModal(false)} className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-full">
@@ -4740,6 +4742,7 @@ const PazintysPlatforma = () => {
                   onChange={(e) => setRegisterEmail(e.target.value)}
                   placeholder="pvz: vardas@example.com"
                   required
+                  autoComplete="off"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
@@ -4750,6 +4753,7 @@ const PazintysPlatforma = () => {
                   value={registerPassword}
                   onChange={(e) => setRegisterPassword(e.target.value)}
                   placeholder="Bent 6 simbolių"
+                  autoComplete="new-password"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
@@ -4760,6 +4764,7 @@ const PazintysPlatforma = () => {
                   value={registerConfirmPassword}
                   onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                   placeholder="Pakartokite slaptažodį"
+                  autoComplete="new-password"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
