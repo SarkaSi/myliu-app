@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Heart, MessageCircle, User, Eye, Search, Bell, X, Send, Camera, Settings, MapPin, Shield, CreditCard, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sendVerificationEmail } from './emailService';
 
@@ -334,25 +334,20 @@ const PazintysPlatforma = () => {
     };
   });
   
-  // Registration form state - initialized with userProfile data arba iš localStorage (su backup)
+  // Registration form state - tik iš localStorage (nenaudoti userProfile čia – gali kilti "before initialization" klaida)
   const [registrationData, setRegistrationData] = useState(() => {
     try {
-      // Pirmiausia bandoma atkurti iš pagrindinio
       let saved = localStorage.getItem('myliu_registrationData');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Patikrinti ar yra realūs duomenys
         if (parsed.name || parsed.photos?.length > 0 || parsed.bio) {
           return parsed;
         }
       }
-      
-      // Jei pagrindinis netinkamas, bandoma iš backup
       saved = localStorage.getItem('myliu_registrationData_backup');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.name || parsed.photos?.length > 0 || parsed.bio) {
-          // Atkurti backup į pagrindinį
           localStorage.setItem('myliu_registrationData', JSON.stringify(parsed));
           return parsed;
         }
@@ -361,21 +356,21 @@ const PazintysPlatforma = () => {
       console.error('Error loading registrationData from localStorage:', e);
     }
     return {
-      photos: userProfile.photos || [],
-      name: userProfile.name || '',
-      gender: userProfile.gender || '',
-      age: userProfile.age?.toString() || '',
-      city: userProfile.city || '',
-      street: userProfile.street || '',
-      house: userProfile.house || '',
-      height: userProfile.height || '',
-      bodyType: userProfile.bodyType || '',
-      civilStatus: userProfile.civilStatus || '',
-      hairColor: userProfile.hairColor || '',
-      eyeColor: userProfile.eyeColor || '',
-      bio: userProfile.bio || '',
-      hobbies: userProfile.interests || [],
-      eroticInterests: userProfile.eroticInterests || []
+      photos: [],
+      name: '',
+      gender: '',
+      age: '',
+      city: '',
+      street: '',
+      house: '',
+      height: '',
+      bodyType: '',
+      civilStatus: '',
+      hairColor: '',
+      eyeColor: '',
+      bio: '',
+      hobbies: [],
+      eroticInterests: []
     };
   });
   
@@ -431,15 +426,6 @@ const PazintysPlatforma = () => {
       console.error('Error saving registrationData to localStorage:', e);
     }
   }, [registrationData, profileComplete]);
-
-  // Išsaugoti visus narius į localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('myliu_allMembers', JSON.stringify(allMembers));
-    } catch (e) {
-      console.error('Error saving allMembers to localStorage:', e);
-    }
-  }, [allMembers]);
 
   // Automatiškai sukurti pokalbį ir nustatyti activeChat kai atidaromas profilis
   useEffect(() => {
@@ -654,6 +640,15 @@ const PazintysPlatforma = () => {
     }
     return [];
   });
+
+  // Išsaugoti visus narius į localStorage (turi būti PO allMembers deklaracijos)
+  useEffect(() => {
+    try {
+      localStorage.setItem('myliu_allMembers', JSON.stringify(allMembers));
+    } catch (e) {
+      console.error('Error saving allMembers to localStorage:', e);
+    }
+  }, [allMembers]);
 
   const [profiles, setProfiles] = useState([
     {
@@ -1707,11 +1702,8 @@ const PazintysPlatforma = () => {
   const getProfile = (id) => profiles.find(p => p.id === id) || allMembers.find(p => p.id === id);
 
   // Narių sąrašas be savo profilio (kiti nariai + statiniai profiliai)
-  const displayProfiles = useMemo(() =>
-    profiles.concat(allMembers).filter(p =>
-      p.id !== 'my-profile' && (!p.email || p.email !== (userProfile.email || ''))
-    ),
-    [profiles, allMembers, userProfile.email]
+  const displayProfiles = (Array.isArray(profiles) ? profiles : []).concat(Array.isArray(allMembers) ? allMembers : []).filter(p =>
+    p && p.id !== 'my-profile' && (!p.email || p.email !== ((userProfile && userProfile.email) || ''))
   );
 
   const toggleStatus = (profileId, statusType) => {
