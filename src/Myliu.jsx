@@ -450,90 +450,99 @@ const PazintysPlatforma = () => {
     }
   }, [userProfile, profileComplete]);
 
-  // Vienkartinis atkūrimas iš backup – jei pagrindiniai duomenys nepilni, atstatyti iš backup
-  useEffect(() => {
+  // Vienkartinis atkūrimas iš backup – kuo anksčiau, kad anketų duomenys neišnyktų
+  useLayoutEffect(() => {
     if (hasRestoredFromBackup.current) return;
     hasRestoredFromBackup.current = true;
-    const run = () => {
+    try {
+      // 1) allMembers – visada sujungti su backup (pilnesni duomenys iš backup)
+      const mainMembersJson = localStorage.getItem('myliu_allMembers');
+      const backupMembersJson = localStorage.getItem('myliu_allMembers_backup');
+      let mainArr = [];
       try {
-        // 1) allMembers – atkurti iš backup, jei backup turi daugiau narių arba pilnesnius duomenis
-        const mainMembersJson = localStorage.getItem('myliu_allMembers');
-        const backupMembersJson = localStorage.getItem('myliu_allMembers_backup');
-        let mainArr = [];
-        try {
-          if (mainMembersJson) {
-            const p = JSON.parse(mainMembersJson);
-            mainArr = Array.isArray(p) ? p.filter(m => m && m.id) : [];
-          }
-        } catch (_) {}
-        let backupArr = [];
-        if (backupMembersJson) {
-          try {
-            const bp = JSON.parse(backupMembersJson);
-            if (Array.isArray(bp)) backupArr = bp.filter(m => m && m.id);
-            else if (bp && Array.isArray(bp.members)) backupArr = (bp.members || []).filter(m => m && m.id);
-          } catch (_) {}
+        if (mainMembersJson) {
+          const p = JSON.parse(mainMembersJson);
+          mainArr = Array.isArray(p) ? p.filter(m => m && m.id) : [];
         }
-        const backupHasMore = backupArr.length > mainArr.length;
-        const backupHasRicher = backupArr.some(b => {
-          const inMain = mainArr.find(m => m.id === b.id);
-          if (!inMain) return true;
-          const bPhotos = Array.isArray(b.photos) ? b.photos.length : 0;
-          const mPhotos = Array.isArray(inMain.photos) ? inMain.photos.length : 0;
-          return bPhotos > mPhotos || (b.name && !inMain.name);
-        });
-        if (backupArr.length > 0 && (backupHasMore || backupHasRicher)) {
-          const merged = mainArr.slice();
-          backupArr.forEach(b => {
-            const idx = merged.findIndex(m => m && m.id === b.id);
-            const hasData = (arr) => Array.isArray(arr) && arr.length > 0;
-            const bRicher = hasData(b.photos) || (b.name && b.name.trim());
-            if (idx >= 0) {
-              const existing = merged[idx];
-              if (bRicher && (!hasData(existing.photos) || !(existing.name && existing.name.trim()))) {
-                merged[idx] = { ...existing, ...b, status: existing.status || b.status };
-              }
-            } else {
-              merged.push(b);
-            }
-          });
+      } catch (_) {}
+      let backupArr = [];
+      if (backupMembersJson) {
+        try {
+          const bp = JSON.parse(backupMembersJson);
+          if (Array.isArray(bp)) backupArr = bp.filter(m => m && m.id);
+          else if (bp && Array.isArray(bp.members)) backupArr = (bp.members || []).filter(m => m && m.id);
+        } catch (_) {}
+      }
+      if (backupArr.length > 0) {
+        const merged = mergeMembersWithBackup(mainArr, backupArr);
+        if (merged.length > 0) {
           localStorage.setItem('myliu_allMembers', JSON.stringify(merged));
           setAllMembers(merged);
         }
-
-        // 2) userProfile – atkurti iš backup, jei backup turi nuotraukas / vardą, o pagrindinis – ne
-        const mainProfileJson = localStorage.getItem('myliu_userProfile');
-        const backupProfileJson = localStorage.getItem('myliu_userProfile_backup');
-        let mainProfile = null;
-        let backupProfile = null;
-        try {
-          if (mainProfileJson) mainProfile = JSON.parse(mainProfileJson);
-        } catch (_) {}
-        try {
-          if (backupProfileJson) {
-            const bp = JSON.parse(backupProfileJson);
-            // userProfile_backup yra { ...userProfile, savedAt } – ne objektas su members
-            backupProfile = bp && typeof bp === 'object' && !Array.isArray(bp.members) ? bp : null;
-          }
-        } catch (_) {}
-        if (backupProfile && mainProfile) {
-          const mainPhotos = Array.isArray(mainProfile.photos) ? mainProfile.photos.length : 0;
-          const backupPhotos = Array.isArray(backupProfile.photos) ? backupProfile.photos.length : 0;
-          const backupHasName = backupProfile.name && backupProfile.name.trim() && backupProfile.name !== 'Tomas';
-          const mainNoName = !mainProfile.name || !mainProfile.name.trim() || mainProfile.name === 'Tomas';
-          if (backupPhotos > mainPhotos || (backupHasName && mainNoName)) {
-            const restored = { ...mainProfile, ...backupProfile };
-            delete restored.savedAt;
-            localStorage.setItem('myliu_userProfile', JSON.stringify(restored));
-            setUserProfile(restored);
-          }
-        }
-      } catch (e) {
-        console.error('Error restoring from backup:', e);
       }
-    };
-    const t = setTimeout(run, 100);
-    return () => clearTimeout(t);
+
+      // 2) userProfile – atkurti iš backup arba iš allMembers pagal lastLoginEmail
+      const lastEmail = localStorage.getItem('myliu_lastLoginEmail');
+      const mainProfileJson = localStorage.getItem('myliu_userProfile');
+      const backupProfileJson = localStorage.getItem('myliu_userProfile_backup');
+      let mainProfile = null;
+      let backupProfile = null;
+      try {
+        if (mainProfileJson) mainProfile = JSON.parse(mainProfileJson);
+      } catch (_) {}
+      try {
+        if (backupProfileJson) {
+          const bp = JSON.parse(backupProfileJson);
+          backupProfile = bp && typeof bp === 'object' && !Array.isArray(bp.members) ? bp : null;
+        }
+      } catch (_) {}
+      const mainPhotos = mainProfile ? (Array.isArray(mainProfile.photos) ? mainProfile.photos.length : 0) : 0;
+      const mainNoName = !mainProfile || !mainProfile.name || !mainProfile.name.trim() || mainProfile.name === 'Tomas';
+      const backupPhotos = backupProfile ? (Array.isArray(backupProfile.photos) ? backupProfile.photos.length : 0) : 0;
+      const backupHasName = backupProfile && backupProfile.name && backupProfile.name.trim() && backupProfile.name !== 'Tomas';
+
+      if (backupProfile && (backupPhotos > mainPhotos || (backupHasName && mainNoName))) {
+        const restored = { ...(mainProfile || {}), ...backupProfile };
+        delete restored.savedAt;
+        localStorage.setItem('myliu_userProfile', JSON.stringify(restored));
+        setUserProfile(restored);
+      } else if (lastEmail && mainNoName && mainPhotos === 0) {
+        // Prisijungęs vartotojas, bet profilis tuščias – atkurti iš allMembers (jau sumerged)
+        const membersJson = localStorage.getItem('myliu_allMembers');
+        const members = membersJson ? JSON.parse(membersJson) : [];
+        const member = Array.isArray(members) && members.find(m => m && m.email === lastEmail);
+        if (member && (member.photos?.length > 0 || (member.name && member.name.trim()))) {
+          const restoredProfile = {
+            name: member.name || '',
+            age: member.age || 18,
+            city: member.city || '',
+            street: member.street || '',
+            house: member.house || '',
+            gender: member.gender || '',
+            bodyType: member.bodyType || 'Vidutinis',
+            height: member.height || '175',
+            hairColor: member.hairColor || '',
+            eyeColor: member.eyeColor || '',
+            civilStatus: member.civilStatus || '',
+            bio: member.bio || '',
+            interests: Array.isArray(member.interests) ? member.interests : [],
+            eroticInterests: Array.isArray(member.eroticInterests) ? member.eroticInterests : [],
+            photos: Array.isArray(member.photos) ? member.photos : [],
+            smoking: member.smoking || 'Ne',
+            tattoos: member.tattoos || 'Ne',
+            piercing: member.piercing || 'Ne',
+            phone: member.phone || '',
+            email: lastEmail,
+            isOnline: member.isOnline !== undefined ? member.isOnline : true
+          };
+          localStorage.setItem('myliu_userProfile', JSON.stringify(restoredProfile));
+          setUserProfile(restoredProfile);
+          localStorage.setItem('myliu_userProfile_backup', JSON.stringify({ ...restoredProfile, savedAt: new Date().toISOString() }));
+        }
+      }
+    } catch (e) {
+      console.error('Error restoring from backup:', e);
+    }
   }, []);
 
   // Automatiškai išsaugoti registrationData į localStorage kai jis keičiasi (VISADA)
@@ -787,49 +796,62 @@ const PazintysPlatforma = () => {
     eroticInterest: 'visi'
   });
 
+  // Sujungti main + backup: grąžinti pilnesnius duomenis (backup laimi jei daugiau nuotraukų/vardas)
+  const mergeMembersWithBackup = (mainArr, backupArr) => {
+    const withId = (m) => m && m.id;
+    const photosCount = (m) => Array.isArray(m.photos) ? m.photos.length : 0;
+    const hasName = (m) => m.name && String(m.name).trim();
+    const merged = (mainArr || []).filter(withId).slice();
+    (backupArr || []).filter(withId).forEach(b => {
+      const idx = merged.findIndex(m => m.id === b.id);
+      if (idx >= 0) {
+        const ex = merged[idx];
+        const bRicher = photosCount(b) > photosCount(ex) || (hasName(b) && !hasName(ex));
+        if (bRicher) merged[idx] = { ...ex, ...b, status: ex.status || b.status };
+      } else {
+        merged.push(b);
+      }
+    });
+    return merged;
+  };
+
   // Visi užsiregistravę nariai (išsaugomi localStorage) – kad matytume kitus narius
-  // ⚠️ SVARBU APSAUGOS TAIKYMAS: Šie duomenys NIEKADA neturėtų būti keičiami netinkamai!
-  // Leidžiama keisti TIK per:
-  //   1. handleCompleteProfile() - prideda/atnaujina narį (su visais duomenimis)
-  //   2. toggleStatus() - keičia TIK status lauką (likę duomenys nepakitę)
-  // Visi kiti kodai TURI naudoti šias funkcijas, ne tiesiogiai setAllMembers()!
-  // Narys laikomas naudotinu, jei turi id ir bent vieną: vardą, el. paštą arba nuotraukas
+  // ⚠️ SVARBU: Pirmiausia atstatome iš backup – jei backup turi pilnesnius duomenis, naudojame juos
   const [allMembers, setAllMembers] = useState(() => {
     const withId = (m) => m && m.id;
-    const keepMember = (m) => withId(m) && (m.email || m.name || (Array.isArray(m.photos) && m.photos.length > 0));
     try {
       let main = [];
       const saved = localStorage.getItem('myliu_allMembers');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) main = parsed.filter(withId);
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) main = parsed.filter(withId);
+        } catch (_) {}
       }
       let backupArr = [];
       const backup = localStorage.getItem('myliu_allMembers_backup');
       if (backup) {
-        const backupParsed = JSON.parse(backup);
-        if (Array.isArray(backupParsed)) backupArr = backupParsed.filter(withId);
-        else if (backupParsed && Array.isArray(backupParsed.members)) backupArr = (backupParsed.members || []).filter(withId);
+        try {
+          const bp = JSON.parse(backup);
+          if (Array.isArray(bp)) backupArr = bp.filter(withId);
+          else if (bp && Array.isArray(bp.members)) backupArr = (bp.members || []).filter(withId);
+        } catch (_) {}
       }
-      // Jei backup turi daugiau narių – atstatome iš backup (kad neprarastų anketų)
-      if (backupArr.length > main.length && backupArr.length > 0) {
-        localStorage.setItem('myliu_allMembers', JSON.stringify(backupArr));
-        return backupArr;
-      }
-      if (main.length > 0) return main;
-      if (backupArr.length > 0) {
-        localStorage.setItem('myliu_allMembers', JSON.stringify(backupArr));
-        return backupArr;
+      // Visada sujungti su backup – grąžinti pilnesnius duomenis (nuotraukos, vardai)
+      const merged = mergeMembersWithBackup(main, backupArr);
+      if (merged.length > 0) {
+        try {
+          localStorage.setItem('myliu_allMembers', JSON.stringify(merged));
+        } catch (_) {}
+        return merged;
       }
     } catch (e) {
       console.error('Error loading allMembers from localStorage:', e);
       try {
         const backup = localStorage.getItem('myliu_allMembers_backup');
         if (backup) {
-          const backupParsed = JSON.parse(backup);
-          let arr = [];
-          if (Array.isArray(backupParsed)) arr = backupParsed;
-          else if (backupParsed && Array.isArray(backupParsed.members)) arr = backupParsed.members || [];
+          const bp = JSON.parse(backup);
+          let arr = Array.isArray(bp) ? bp : (bp?.members || []);
           const fallback = arr.filter(m => m && m.id);
           if (fallback.length > 0) {
             localStorage.setItem('myliu_allMembers', JSON.stringify(fallback));
@@ -843,17 +865,35 @@ const PazintysPlatforma = () => {
     return [];
   });
 
-  // Išsaugoti visus narius – NIEKADA nefiltruoti pagal email/name, kad neprarastų nuotraukų ir duomenų
+  // Išsaugoti visus narius – NIEKADA neperrašyti backup prastesniais duomenimis (kad anketos neišnyktų)
   useEffect(() => {
     if (isInitialMount.current) return;
     try {
       if (!Array.isArray(allMembers)) return;
       const toSave = allMembers.filter(m => m && m.id);
       localStorage.setItem('myliu_allMembers', JSON.stringify(toSave));
-      localStorage.setItem('myliu_allMembers_backup', JSON.stringify({
-        members: toSave,
-        savedAt: new Date().toISOString()
-      }));
+      // Backup atnaujinti TIK jei nauji duomenys nėra prastesni už esamą backup
+      const backupJson = localStorage.getItem('myliu_allMembers_backup');
+      let backupArr = [];
+      if (backupJson) {
+        try {
+          const bp = JSON.parse(backupJson);
+          backupArr = Array.isArray(bp) ? bp : (bp?.members || []);
+          backupArr = backupArr.filter(m => m && m.id);
+        } catch (_) {}
+      }
+      const photosCount = (m) => Array.isArray(m.photos) ? m.photos.length : 0;
+      const wouldLoseData = toSave.length < backupArr.length ||
+        toSave.some(m => {
+          const inB = backupArr.find(b => b.id === m.id);
+          return inB && (photosCount(m) < photosCount(inB) || (inB.name && inB.name.trim() && !(m.name && m.name.trim())));
+        });
+      if (!wouldLoseData) {
+        localStorage.setItem('myliu_allMembers_backup', JSON.stringify({
+          members: toSave,
+          savedAt: new Date().toISOString()
+        }));
+      }
     } catch (e) {
       console.error('Error saving allMembers to localStorage:', e);
     }
