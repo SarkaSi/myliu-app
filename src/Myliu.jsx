@@ -283,26 +283,59 @@ const PazintysPlatforma = () => {
     });
   };
   
-  // Atkurti userProfile iš localStorage arba naudoti default (su backup atkūrimu)
+  // Atkurti userProfile – pirmiausia iš allMembers (jei yra email), tada iš localStorage
   const [userProfile, setUserProfile] = useState(() => {
     try {
-      // Pirmiausia bandoma atkurti iš pagrindinio
+      // Pirmiausia patikrinti, ar yra email localStorage (iš ankstesnės sesijos)
+      const savedEmail = localStorage.getItem('myliu_lastLoginEmail');
+      if (savedEmail) {
+        const membersJson = localStorage.getItem('myliu_allMembers');
+        if (membersJson) {
+          const members = JSON.parse(membersJson);
+          const member = Array.isArray(members) && members.find(m => m && m.email === savedEmail);
+          if (member) {
+            // Atkurti VISUS duomenis iš allMembers
+            const restored = {
+              name: member.name || '',
+              age: member.age || 18,
+              city: member.city || '',
+              street: member.street || '',
+              house: member.house || '',
+              gender: member.gender || '',
+              bodyType: member.bodyType || 'Vidutinis',
+              height: member.height || '175',
+              hairColor: member.hairColor || '',
+              eyeColor: member.eyeColor || '',
+              civilStatus: member.civilStatus || '',
+              bio: member.bio || '',
+              interests: Array.isArray(member.interests) ? member.interests : [],
+              eroticInterests: Array.isArray(member.eroticInterests) ? member.eroticInterests : [],
+              photos: Array.isArray(member.photos) ? member.photos : [],
+              smoking: member.smoking || 'Ne',
+              tattoos: member.tattoos || 'Ne',
+              piercing: member.piercing || 'Ne',
+              phone: member.phone || '',
+              email: savedEmail,
+              isOnline: member.isOnline !== undefined ? member.isOnline : true
+            };
+            hasLoadedFromStorage.current = true;
+            return restored;
+          }
+        }
+      }
+      // Jei allMembers nerastas, bandoma iš userProfile localStorage
       let saved = localStorage.getItem('myliu_userProfile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Patikrinti ar yra realūs duomenys (ne default)
         if (parsed.name && (parsed.name !== 'Tomas' || parsed.photos?.length > 0 || parsed.bio)) {
           hasLoadedFromStorage.current = true;
           return parsed;
         }
       }
-      
-      // Jei pagrindinis netinkamas, bandoma iš backup
       saved = localStorage.getItem('myliu_userProfile_backup');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.name && (parsed.name !== 'Tomas' || parsed.photos?.length > 0 || parsed.bio)) {
-          // Atkurti backup į pagrindinį
           localStorage.setItem('myliu_userProfile', JSON.stringify(parsed));
           hasLoadedFromStorage.current = true;
           return parsed;
@@ -376,23 +409,36 @@ const PazintysPlatforma = () => {
     };
   });
   
-  // Automatiškai išsaugoti userProfile į localStorage kai jis keičiasi (VISADA - net jei neprisijungęs)
+  // Automatiškai išsaugoti userProfile į localStorage – BET NIEKADA neperrašyti su tuščiais duomenimis
   useEffect(() => {
-    // Praleisti pirmą render'į (initial mount)
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    
     try {
-      // Išsaugoti tik jei yra bent koks turinys (ne tuščias default)
-      const hasData = (userProfile.name && userProfile.name !== 'Tomas') || 
-                      userProfile.photos?.length > 0 || 
-                      userProfile.bio || 
-                      profileComplete;
-      if (hasData) {
+      // Išsaugoti tik jei yra REALIUS duomenys (ne default "Tomas" arba tuščias)
+      const hasRealData = (userProfile.name && userProfile.name !== 'Tomas' && userProfile.name.trim()) || 
+                          (Array.isArray(userProfile.photos) && userProfile.photos.length > 0) || 
+                          (userProfile.bio && userProfile.bio.trim()) ||
+                          profileComplete;
+      if (hasRealData) {
+        // Patikrinti, ar esamas localStorage profilis turi daugiau duomenų nei naujas
+        const existing = localStorage.getItem('myliu_userProfile');
+        if (existing) {
+          try {
+            const existingParsed = JSON.parse(existing);
+            const existingHasPhotos = Array.isArray(existingParsed.photos) && existingParsed.photos.length > 0;
+            const newHasPhotos = Array.isArray(userProfile.photos) && userProfile.photos.length > 0;
+            // Jei esamas turi nuotraukas, bet naujas neturi – NEperrašyti (apsauga nuo praradimo)
+            if (existingHasPhotos && !newHasPhotos && existingParsed.name && existingParsed.name !== 'Tomas') {
+              console.warn('⚠️ Neišsaugojame userProfile: esamas profilis turi daugiau duomenų (nuotraukos)');
+              return;
+            }
+          } catch (e) {
+            // Jei parse klaida, tęsti su išsaugojimu
+          }
+        }
         localStorage.setItem('myliu_userProfile', JSON.stringify(userProfile));
-        // Backup
         localStorage.setItem('myliu_userProfile_backup', JSON.stringify({
           ...userProfile,
           savedAt: new Date().toISOString()
@@ -2281,20 +2327,57 @@ const PazintysPlatforma = () => {
       console.error('Error loading data from localStorage:', e);
     }
 
-    // Prisijungti – nustatome dabartinio vartotojo el. paštą ir jei yra allMembers, atkuriame jo profilį
+    // Prisijungti – atkurti VISUS profilio duomenis iš allMembers (apsauga nuo duomenų praradimo)
     const loginEmail = loginEmailOrPhone.trim();
     try {
       const membersJson = localStorage.getItem('myliu_allMembers');
       const members = membersJson ? JSON.parse(membersJson) : [];
-      const member = Array.isArray(members) && members.find(m => m.email === loginEmail);
+      const member = Array.isArray(members) && members.find(m => m && m.email === loginEmail);
       if (member) {
-        setUserProfile({ ...member, email: loginEmail });
-        const toSave = { ...member, email: loginEmail };
-        localStorage.setItem('myliu_userProfile', JSON.stringify(toSave));
+        // Atkurti VISUS duomenis iš allMembers – užtikrinti, kad visi laukai būtų užpildyti
+        const restoredProfile = {
+          name: member.name || '',
+          age: member.age || 18,
+          city: member.city || '',
+          street: member.street || '',
+          house: member.house || '',
+          gender: member.gender || '',
+          bodyType: member.bodyType || 'Vidutinis',
+          height: member.height || '175',
+          hairColor: member.hairColor || '',
+          eyeColor: member.eyeColor || '',
+          civilStatus: member.civilStatus || '',
+          bio: member.bio || '',
+          interests: Array.isArray(member.interests) ? member.interests : [],
+          eroticInterests: Array.isArray(member.eroticInterests) ? member.eroticInterests : [],
+          photos: Array.isArray(member.photos) ? member.photos : [],
+          smoking: member.smoking || 'Ne',
+          tattoos: member.tattoos || 'Ne',
+          piercing: member.piercing || 'Ne',
+          phone: member.phone || '',
+          email: loginEmail,
+          isOnline: member.isOnline !== undefined ? member.isOnline : true
+        };
+        setUserProfile(restoredProfile);
+        // Išsaugoti atkurtą profilį su VISOMIS duomenimis
+        localStorage.setItem('myliu_userProfile', JSON.stringify(restoredProfile));
+        localStorage.setItem('myliu_userProfile_backup', JSON.stringify({
+          ...restoredProfile,
+          savedAt: new Date().toISOString()
+        }));
+        // Išsaugoti email, kad kitą kartą galėtume atkurti iš allMembers
+        localStorage.setItem('myliu_lastLoginEmail', loginEmail);
+        // Jei profilis turi duomenis, nustatyti profileComplete
+        if (restoredProfile.name && restoredProfile.photos?.length > 0) {
+          setProfileComplete(true);
+          localStorage.setItem('myliu_profileComplete', 'true');
+        }
       } else {
+        // Jei narys nerastas allMembers, tik pridėti email (neperrašyti esamų duomenų)
         setUserProfile(prev => ({ ...prev, email: loginEmail }));
       }
     } catch (e) {
+      console.error('Error restoring profile from allMembers:', e);
       setUserProfile(prev => ({ ...prev, email: loginEmail }));
     }
     setIsLoggedIn(true);
@@ -2316,22 +2399,29 @@ const PazintysPlatforma = () => {
       alert(`Prašome užpildyti privalomus laukus:\n${errors.join(', ')}`);
       return;
     }
+    // SVARBU: Naudoti registrationData duomenis (naujai užpildyti), bet jei trūksta – naudoti userProfile (apsauga nuo praradimo)
     const updatedProfile = {
-      name: registrationData.name?.trim() || userProfile.name,
-      gender: registrationData.gender || userProfile.gender,
-      age: parseInt(registrationData.age, 10) || userProfile.age,
-      city: registrationData.city?.trim() || userProfile.city,
-      street: registrationData.street?.trim() || userProfile.street,
-      house: registrationData.house?.trim() || userProfile.house,
-      height: registrationData.height || userProfile.height,
-      bodyType: registrationData.bodyType || userProfile.bodyType,
-      civilStatus: registrationData.civilStatus || userProfile.civilStatus,
-      hairColor: registrationData.hairColor || userProfile.hairColor,
-      eyeColor: registrationData.eyeColor || userProfile.eyeColor,
-      bio: registrationData.bio || userProfile.bio,
-      interests: registrationData.hobbies || userProfile.interests,
-      eroticInterests: registrationData.eroticInterests || userProfile.eroticInterests,
-      photos: registrationData.photos || userProfile.photos,
+      name: registrationData.name?.trim() || userProfile.name || '',
+      gender: registrationData.gender || userProfile.gender || '',
+      age: parseInt(registrationData.age, 10) || userProfile.age || 18,
+      city: registrationData.city?.trim() || userProfile.city || '',
+      street: registrationData.street?.trim() || userProfile.street || '',
+      house: registrationData.house?.trim() || userProfile.house || '',
+      height: registrationData.height || userProfile.height || '175',
+      bodyType: registrationData.bodyType || userProfile.bodyType || 'Vidutinis',
+      civilStatus: registrationData.civilStatus || userProfile.civilStatus || '',
+      hairColor: registrationData.hairColor || userProfile.hairColor || '',
+      eyeColor: registrationData.eyeColor || userProfile.eyeColor || '',
+      bio: registrationData.bio?.trim() || userProfile.bio || '',
+      interests: Array.isArray(registrationData.hobbies) && registrationData.hobbies.length > 0 
+        ? registrationData.hobbies 
+        : (Array.isArray(userProfile.interests) ? userProfile.interests : []),
+      eroticInterests: Array.isArray(registrationData.eroticInterests) && registrationData.eroticInterests.length > 0
+        ? registrationData.eroticInterests
+        : (Array.isArray(userProfile.eroticInterests) ? userProfile.eroticInterests : []),
+      photos: Array.isArray(registrationData.photos) && registrationData.photos.length > 0
+        ? registrationData.photos
+        : (Array.isArray(userProfile.photos) ? userProfile.photos : []),
       isOnline: userProfile.isOnline !== undefined ? userProfile.isOnline : true,
       smoking: userProfile.smoking || 'Ne',
       tattoos: userProfile.tattoos || 'Ne',
@@ -2375,29 +2465,39 @@ const PazintysPlatforma = () => {
       status: { watching: false, liked: false, likedMe: false }
     };
     setAllMembers(prev => {
-      // Išsaugoti esamus narius – tik pridėti/atnaujinti šį narį pagal email
-      const existingIndex = prev.findIndex(p => p && p.email === updatedProfile.email);
+      // SVARBU: Visada išsaugoti VISUS duomenis – niekada neperrašyti su tuščiais
+      const existingIndex = prev.findIndex(p => p && (p.email === updatedProfile.email || p.id === memberId));
       if (existingIndex >= 0) {
-        // Atnaujinti esamą narį – bet išsaugoti jo status (jei turi)
         const existing = prev[existingIndex];
-        const updated = {
-          ...memberCard,
-          status: existing.status || memberCard.status // Išsaugoti esamą status
+        // Sujungti esamus duomenis su naujais – jei nauji turi duomenų, naudoti juos; jei ne, išlaikyti esamus
+        const merged = {
+          ...existing, // Pradėti nuo esamų duomenų (apsauga nuo praradimo)
+          ...memberCard, // Perrašyti naujais duomenimis
+          status: existing.status || memberCard.status, // Išsaugoti status
+          // Jei nauji duomenys tušti, bet esami turi – išlaikyti esamus
+          photos: (Array.isArray(memberCard.photos) && memberCard.photos.length > 0) ? memberCard.photos : (existing.photos || []),
+          name: memberCard.name || existing.name || '',
+          bio: memberCard.bio || existing.bio || '',
+          interests: (Array.isArray(memberCard.interests) && memberCard.interests.length > 0) ? memberCard.interests : (existing.interests || []),
+          eroticInterests: (Array.isArray(memberCard.eroticInterests) && memberCard.eroticInterests.length > 0) ? memberCard.eroticInterests : (existing.eroticInterests || [])
         };
         const newMembers = [...prev];
-        newMembers[existingIndex] = updated;
+        newMembers[existingIndex] = merged;
         return newMembers;
       } else {
-        // Pridėti naują narį
         return [...prev, memberCard];
       }
     });
     
-    // Išsaugoti į localStorage (VISADA, net jei neprisijungęs)
+    // Išsaugoti į localStorage su VISOMIS duomenimis (apsauga nuo praradimo)
     try {
       localStorage.setItem('myliu_userProfile', JSON.stringify(updatedProfile));
       localStorage.setItem('myliu_profileComplete', 'true');
       localStorage.setItem('myliu_registrationData', JSON.stringify(registrationData));
+      // Išsaugoti email, kad kitą kartą galėtume atkurti iš allMembers
+      if (updatedProfile.email) {
+        localStorage.setItem('myliu_lastLoginEmail', updatedProfile.email);
+      }
       // Backup - išsaugoti su timestamp
       localStorage.setItem('myliu_userProfile_backup', JSON.stringify({
         ...updatedProfile,
@@ -2409,12 +2509,14 @@ const PazintysPlatforma = () => {
       }));
     } catch (e) {
       console.error('Error saving to localStorage:', e);
-      // Jei localStorage pilnas, bandoma išvalyti senus backup'us
       try {
         localStorage.removeItem('myliu_userProfile_backup');
         localStorage.setItem('myliu_userProfile', JSON.stringify(updatedProfile));
         localStorage.setItem('myliu_profileComplete', 'true');
         localStorage.setItem('myliu_registrationData', JSON.stringify(registrationData));
+        if (updatedProfile.email) {
+          localStorage.setItem('myliu_lastLoginEmail', updatedProfile.email);
+        }
       } catch (e2) {
         console.error('Error saving after cleanup:', e2);
       }
