@@ -656,23 +656,96 @@ const PazintysPlatforma = () => {
   });
 
   // Visi užsiregistravę nariai (išsaugomi localStorage) – kad matytume kitus narius
+  // ⚠️ SVARBU APSAUGOS TAIKYMAS: Šie duomenys NIEKADA neturėtų būti keičiami netinkamai!
+  // Leidžiama keisti TIK per:
+  //   1. handleCompleteProfile() - prideda/atnaujina narį (su visais duomenimis)
+  //   2. toggleStatus() - keičia TIK status lauką (likę duomenys nepakitę)
+  // Visi kiti kodai TURI naudoti šias funkcijas, ne tiesiogiai setAllMembers()!
   const [allMembers, setAllMembers] = useState(() => {
     try {
+      // Pirmiausia bandoma atkurti iš pagrindinio
       const saved = localStorage.getItem('myliu_allMembers');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Validuoti, kad visi nariai turi reikalingus laukus
+          const valid = parsed.filter(m => m && m.id && m.email && m.name);
+          if (valid.length > 0) {
+            return valid;
+          }
+        }
+      }
+      // Jei pagrindinis netinkamas, bandoma iš backup
+      const backup = localStorage.getItem('myliu_allMembers_backup');
+      if (backup) {
+        const backupParsed = JSON.parse(backup);
+        let membersArray = [];
+        // Backup gali būti arba masyvas, arba objektas su members lauku
+        if (Array.isArray(backupParsed)) {
+          membersArray = backupParsed;
+        } else if (backupParsed && Array.isArray(backupParsed.members)) {
+          membersArray = backupParsed.members;
+        }
+        if (membersArray.length > 0) {
+          const valid = membersArray.filter(m => m && m.id && m.email && m.name);
+          if (valid.length > 0) {
+            // Atkurti backup į pagrindinį
+            localStorage.setItem('myliu_allMembers', JSON.stringify(valid));
+            return valid;
+          }
+        }
       }
     } catch (e) {
       console.error('Error loading allMembers from localStorage:', e);
+      // Bandoma iš backup jei pagrindinis sugadintas
+      try {
+        const backup = localStorage.getItem('myliu_allMembers_backup');
+        if (backup) {
+          const backupParsed = JSON.parse(backup);
+          let membersArray = [];
+          if (Array.isArray(backupParsed)) {
+            membersArray = backupParsed;
+          } else if (backupParsed && Array.isArray(backupParsed.members)) {
+            membersArray = backupParsed.members;
+          }
+          if (membersArray.length > 0) {
+            const valid = membersArray.filter(m => m && m.id && m.email && m.name);
+            if (valid.length > 0) {
+              localStorage.setItem('myliu_allMembers', JSON.stringify(valid));
+              return valid;
+            }
+          }
+        }
+      } catch (e2) {
+        console.error('Error loading allMembers backup:', e2);
+      }
     }
     return [];
   });
 
-  // Išsaugoti visus narius į localStorage (turi būti PO allMembers deklaracijos)
+  // Išsaugoti visus narius į localStorage su backup (APSauga nuo duomenų praradimo)
   useEffect(() => {
+    // Praleisti pirmą render'į
+    if (isInitialMount.current) {
+      return;
+    }
     try {
-      localStorage.setItem('myliu_allMembers', JSON.stringify(allMembers));
+      // Validuoti prieš išsaugant – tik masyvai su teisingais nariais
+      if (Array.isArray(allMembers) && allMembers.length > 0) {
+        const valid = allMembers.filter(m => m && m.id && m.email && m.name);
+        if (valid.length > 0) {
+          // Išsaugoti pagrindinį
+          localStorage.setItem('myliu_allMembers', JSON.stringify(valid));
+          // Backup su timestamp
+          localStorage.setItem('myliu_allMembers_backup', JSON.stringify({
+            members: valid,
+            savedAt: new Date().toISOString()
+          }));
+        }
+      } else if (allMembers.length === 0) {
+        // Jei tuščias, išsaugoti tik jei tikrai tuščias (ne sugadintas)
+        localStorage.setItem('myliu_allMembers', JSON.stringify([]));
+      }
     } catch (e) {
       console.error('Error saving allMembers to localStorage:', e);
     }
@@ -1737,10 +1810,12 @@ const PazintysPlatforma = () => {
   const toggleStatus = (profileId, statusType) => {
     const isMember = typeof profileId === 'string' && String(profileId).startsWith('member-');
     if (isMember) {
+      // SVARBU: Keičiamas TIK status – kiti duomenys lieka nepakitę!
       setAllMembers(prev => prev.map(p => {
-        if (p.id === profileId) {
+        if (p && p.id === profileId) {
           const newStatus = { ...(p.status || {}), [statusType]: !(p.status && p.status[statusType]) };
           if (statusType === 'liked' && newStatus.liked) setNotifications(n => n + 1);
+          // Išsaugoti VISUS kitus laukus nepakitę – tik status keičiamas
           const updated = { ...p, status: newStatus };
           setSelectedProfile(s => s && s.id === profileId ? updated : s);
           return updated;
@@ -2298,17 +2373,23 @@ const PazintysPlatforma = () => {
     setCurrentView('nariai');
     
     // Pridėti / atnaujinti šį narį į visų narių sąrašą (kad kiti matytų)
-    const memberId = 'member-' + (updatedProfile.email || updatedProfile.phone || String(Date.now()));
+    // SVARBU: Tik čia keičiami allMembers duomenys – niekur kitur!
+    if (!updatedProfile.email || !updatedProfile.name) {
+      console.error('Cannot add member to allMembers: missing email or name');
+      alert('Klaida: nepavyko pridėti profilio. Prašome patikrinti el. paštą.');
+      return;
+    }
+    const memberId = 'member-' + updatedProfile.email;
     const memberCard = {
       id: memberId,
-      email: updatedProfile.email || '',
+      email: updatedProfile.email,
       name: updatedProfile.name,
       age: updatedProfile.age,
-      city: updatedProfile.city,
+      city: updatedProfile.city || '',
       street: updatedProfile.street || '',
       house: updatedProfile.house || '',
       distance: 0.5,
-      gender: updatedProfile.gender,
+      gender: updatedProfile.gender || '',
       bodyType: updatedProfile.bodyType || 'Vidutinis',
       height: String(updatedProfile.height || '175'),
       hairColor: updatedProfile.hairColor || '',
@@ -2320,15 +2401,29 @@ const PazintysPlatforma = () => {
       bio: updatedProfile.bio || '',
       interests: updatedProfile.interests || [],
       eroticInterests: updatedProfile.eroticInterests || [],
-      photos: updatedProfile.photos || [],
+      photos: Array.isArray(updatedProfile.photos) ? updatedProfile.photos : [],
       avatar: '👤',
       avatarBg: 'from-orange-400 to-orange-600',
       isOnline: true,
       status: { watching: false, liked: false, likedMe: false }
     };
     setAllMembers(prev => {
-      const rest = prev.filter(p => p.email !== (updatedProfile.email || ''));
-      return [...rest, memberCard];
+      // Išsaugoti esamus narius – tik pridėti/atnaujinti šį narį pagal email
+      const existingIndex = prev.findIndex(p => p && p.email === updatedProfile.email);
+      if (existingIndex >= 0) {
+        // Atnaujinti esamą narį – bet išsaugoti jo status (jei turi)
+        const existing = prev[existingIndex];
+        const updated = {
+          ...memberCard,
+          status: existing.status || memberCard.status // Išsaugoti esamą status
+        };
+        const newMembers = [...prev];
+        newMembers[existingIndex] = updated;
+        return newMembers;
+      } else {
+        // Pridėti naują narį
+        return [...prev, memberCard];
+      }
     });
     
     // Išsaugoti į localStorage (VISADA, net jei neprisijungęs)
