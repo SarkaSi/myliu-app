@@ -38,7 +38,6 @@ const PazintysPlatforma = () => {
   const [registerFormKey, setRegisterFormKey] = useState(0); // keičiamas atidarant – forma remountinama tuščia
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginFormKey, setLoginFormKey] = useState(0); // keičiamas atidarant – forma tuščia
-  const [loginInputsLocked, setLoginInputsLocked] = useState(false); // readOnly kol vartotojas nepaspaudė – apsauga nuo autofill
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
@@ -445,7 +444,7 @@ const PazintysPlatforma = () => {
     prevShowRegisterModal.current = showRegisterModal;
   }, [showRegisterModal]);
 
-  // Kai prisijungimo modalas tik atsidaro – išvalyti formą
+  // Kai prisijungimo modalas tik atsidaro – išvalyti formą (slaptažodžių atmintis vėliau gali užpildyti)
   const prevShowLoginModal = useRef(false);
   useLayoutEffect(() => {
     if (showLoginModal && !prevShowLoginModal.current) {
@@ -2085,11 +2084,10 @@ const PazintysPlatforma = () => {
     setShowRegisterModal(true);
   };
 
-  // Prisijungimo forma – atidarant visada tuščia (kaip registracijos)
+  // Prisijungimo forma – atidarant tuščia; slaptažodžių atmintis gali užpildyti paspaudus ant lauko
   const openLoginModal = () => {
     flushSync(() => {
       setLoginFormKey(k => k + 1);
-      setLoginInputsLocked(true); // readOnly kol vartotojas nefokusuoja – naršyklė nepripildo
       setLoginEmailOrPhone('');
       setLoginPassword('');
     });
@@ -4971,35 +4969,39 @@ const PazintysPlatforma = () => {
               </button>
             </div>
 
-            <div className="space-y-3 sm:space-y-4">
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleLogin(); }}
+              className="space-y-3 sm:space-y-4"
+              autoComplete="on"
+            >
               <div>
-                <label className="block text-sm font-medium mb-2">El. paštas</label>
+                <label htmlFor="login-email" className="block text-sm font-medium mb-2">El. paštas</label>
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
                   value={loginEmailOrPhone}
                   onChange={(e) => setLoginEmailOrPhone(e.target.value)}
-                  onFocus={() => setLoginInputsLocked(false)}
                   placeholder="pvz: vardas@example.com"
-                  autoComplete="off"
-                  readOnly={loginInputsLocked}
+                  autoComplete="email"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Slaptažodis</label>
+                <label htmlFor="login-password" className="block text-sm font-medium mb-2">Slaptažodis</label>
                 <input
+                  id="login-password"
+                  name="password"
                   type="password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  onFocus={() => setLoginInputsLocked(false)}
                   placeholder="Įveskite slaptažodį"
-                  autoComplete="off"
-                  readOnly={loginInputsLocked}
+                  autoComplete="current-password"
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
                 />
               </div>
               <button
-                onClick={handleLogin}
+                type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-lg transition-colors"
               >
                 Prisijungti
@@ -5007,6 +5009,7 @@ const PazintysPlatforma = () => {
               <p className="text-sm text-gray-400 text-center">
                 Neturite paskyros?{' '}
                 <button
+                  type="button"
                   onClick={() => {
                     setShowLoginModal(false);
                     openRegistrationModal();
@@ -5016,7 +5019,7 @@ const PazintysPlatforma = () => {
                   Registruotis
                 </button>
               </p>
-            </div>
+            </form>
           </div>
         </div>
       )}
