@@ -2323,7 +2323,6 @@ const PazintysPlatforma = () => {
     }
     setIsLoggedIn(true);
     localStorage.setItem('myliu_isLoggedIn', 'true');
-    alert('Prisijungimas sėkmingas!');
     setShowLoginModal(false);
     setLoginEmailOrPhone('');
     setLoginPassword('');
