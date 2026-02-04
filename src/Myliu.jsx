@@ -7,6 +7,7 @@ const PazintysPlatforma = () => {
   // Ref kad išvengtume begalinio loop su useEffect
   const isInitialMount = useRef(true);
   const hasLoadedFromStorage = useRef(false);
+  const hasRestoredFromBackup = useRef(false);
   const [currentView, setCurrentView] = useState('nariai');
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
@@ -448,6 +449,92 @@ const PazintysPlatforma = () => {
       console.error('Error saving userProfile to localStorage:', e);
     }
   }, [userProfile, profileComplete]);
+
+  // Vienkartinis atkūrimas iš backup – jei pagrindiniai duomenys nepilni, atstatyti iš backup
+  useEffect(() => {
+    if (hasRestoredFromBackup.current) return;
+    hasRestoredFromBackup.current = true;
+    const run = () => {
+      try {
+        // 1) allMembers – atkurti iš backup, jei backup turi daugiau narių arba pilnesnius duomenis
+        const mainMembersJson = localStorage.getItem('myliu_allMembers');
+        const backupMembersJson = localStorage.getItem('myliu_allMembers_backup');
+        let mainArr = [];
+        try {
+          if (mainMembersJson) {
+            const p = JSON.parse(mainMembersJson);
+            mainArr = Array.isArray(p) ? p.filter(m => m && m.id) : [];
+          }
+        } catch (_) {}
+        let backupArr = [];
+        if (backupMembersJson) {
+          try {
+            const bp = JSON.parse(backupMembersJson);
+            if (Array.isArray(bp)) backupArr = bp.filter(m => m && m.id);
+            else if (bp && Array.isArray(bp.members)) backupArr = (bp.members || []).filter(m => m && m.id);
+          } catch (_) {}
+        }
+        const backupHasMore = backupArr.length > mainArr.length;
+        const backupHasRicher = backupArr.some(b => {
+          const inMain = mainArr.find(m => m.id === b.id);
+          if (!inMain) return true;
+          const bPhotos = Array.isArray(b.photos) ? b.photos.length : 0;
+          const mPhotos = Array.isArray(inMain.photos) ? inMain.photos.length : 0;
+          return bPhotos > mPhotos || (b.name && !inMain.name);
+        });
+        if (backupArr.length > 0 && (backupHasMore || backupHasRicher)) {
+          const merged = mainArr.slice();
+          backupArr.forEach(b => {
+            const idx = merged.findIndex(m => m && m.id === b.id);
+            const hasData = (arr) => Array.isArray(arr) && arr.length > 0;
+            const bRicher = hasData(b.photos) || (b.name && b.name.trim());
+            if (idx >= 0) {
+              const existing = merged[idx];
+              if (bRicher && (!hasData(existing.photos) || !(existing.name && existing.name.trim()))) {
+                merged[idx] = { ...existing, ...b, status: existing.status || b.status };
+              }
+            } else {
+              merged.push(b);
+            }
+          });
+          localStorage.setItem('myliu_allMembers', JSON.stringify(merged));
+          setAllMembers(merged);
+        }
+
+        // 2) userProfile – atkurti iš backup, jei backup turi nuotraukas / vardą, o pagrindinis – ne
+        const mainProfileJson = localStorage.getItem('myliu_userProfile');
+        const backupProfileJson = localStorage.getItem('myliu_userProfile_backup');
+        let mainProfile = null;
+        let backupProfile = null;
+        try {
+          if (mainProfileJson) mainProfile = JSON.parse(mainProfileJson);
+        } catch (_) {}
+        try {
+          if (backupProfileJson) {
+            const bp = JSON.parse(backupProfileJson);
+            // userProfile_backup yra { ...userProfile, savedAt } – ne objektas su members
+            backupProfile = bp && typeof bp === 'object' && !Array.isArray(bp.members) ? bp : null;
+          }
+        } catch (_) {}
+        if (backupProfile && mainProfile) {
+          const mainPhotos = Array.isArray(mainProfile.photos) ? mainProfile.photos.length : 0;
+          const backupPhotos = Array.isArray(backupProfile.photos) ? backupProfile.photos.length : 0;
+          const backupHasName = backupProfile.name && backupProfile.name.trim() && backupProfile.name !== 'Tomas';
+          const mainNoName = !mainProfile.name || !mainProfile.name.trim() || mainProfile.name === 'Tomas';
+          if (backupPhotos > mainPhotos || (backupHasName && mainNoName)) {
+            const restored = { ...mainProfile, ...backupProfile };
+            delete restored.savedAt;
+            localStorage.setItem('myliu_userProfile', JSON.stringify(restored));
+            setUserProfile(restored);
+          }
+        }
+      } catch (e) {
+        console.error('Error restoring from backup:', e);
+      }
+    };
+    const t = setTimeout(run, 100);
+    return () => clearTimeout(t);
+  }, []);
 
   // Automatiškai išsaugoti registrationData į localStorage kai jis keičiasi (VISADA)
   useEffect(() => {
