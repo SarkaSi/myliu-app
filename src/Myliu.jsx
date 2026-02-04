@@ -474,7 +474,8 @@ const PazintysPlatforma = () => {
         } catch (_) {}
       }
       if (backupArr.length > 0) {
-        const merged = mergeMembersWithBackup(mainArr, backupArr);
+        // Backup kaip pagrindas – atstatome savarankiškai užsiregistravusių anketas iš backup
+        const merged = mergeMembersWithBackup(backupArr, mainArr);
         if (merged.length > 0) {
           localStorage.setItem('myliu_allMembers', JSON.stringify(merged));
           setAllMembers(merged);
@@ -837,8 +838,10 @@ const PazintysPlatforma = () => {
           else if (bp && Array.isArray(bp.members)) backupArr = (bp.members || []).filter(withId);
         } catch (_) {}
       }
-      // Visada sujungti su backup – grąžinti pilnesnius duomenis (nuotraukos, vardai)
-      const merged = mergeMembersWithBackup(main, backupArr);
+      // Backup kaip pagrindas – jei yra backup, pirmiausia naudojame ją, tada papildome iš main (anketos neišnyktų)
+      const merged = backupArr.length > 0
+        ? mergeMembersWithBackup(backupArr, main)
+        : mergeMembersWithBackup(main, backupArr);
       if (merged.length > 0) {
         try {
           localStorage.setItem('myliu_allMembers', JSON.stringify(merged));
@@ -2336,6 +2339,64 @@ const PazintysPlatforma = () => {
     setVerificationSentTo([]);
     setIsSendingEmail(false);
     openLoginModal();
+  };
+
+  // Pilnas atkūrimas iš atsarginės kopijos – savarankiškai užsiregistravusių narių anketos
+  const forceRestoreFromBackup = () => {
+    try {
+      const backupJson = localStorage.getItem('myliu_allMembers_backup');
+      if (!backupJson) {
+        alert('Atsarginėje kopijoje nėra narių duomenų.');
+        return;
+      }
+      const bp = JSON.parse(backupJson);
+      let backupArr = Array.isArray(bp) ? bp : (bp && Array.isArray(bp.members) ? bp.members : []);
+      backupArr = backupArr.filter(m => m && m.id);
+      if (backupArr.length === 0) {
+        alert('Atsarginėje kopijoje nėra narių duomenų.');
+        return;
+      }
+      localStorage.setItem('myliu_allMembers', JSON.stringify(backupArr));
+      setAllMembers(backupArr);
+      const lastEmail = localStorage.getItem('myliu_lastLoginEmail');
+      if (lastEmail) {
+        const member = backupArr.find(m => m && m.email === lastEmail);
+        if (member) {
+          const restoredProfile = {
+            name: member.name || '',
+            age: member.age || 18,
+            city: member.city || '',
+            street: member.street || '',
+            house: member.house || '',
+            gender: member.gender || '',
+            bodyType: member.bodyType || 'Vidutinis',
+            height: member.height || '175',
+            hairColor: member.hairColor || '',
+            eyeColor: member.eyeColor || '',
+            civilStatus: member.civilStatus || '',
+            bio: member.bio || '',
+            interests: Array.isArray(member.interests) ? member.interests : [],
+            eroticInterests: Array.isArray(member.eroticInterests) ? member.eroticInterests : [],
+            photos: Array.isArray(member.photos) ? member.photos : [],
+            smoking: member.smoking || 'Ne',
+            tattoos: member.tattoos || 'Ne',
+            piercing: member.piercing || 'Ne',
+            phone: member.phone || '',
+            email: lastEmail,
+            isOnline: member.isOnline !== undefined ? member.isOnline : true
+          };
+          localStorage.setItem('myliu_userProfile', JSON.stringify(restoredProfile));
+          localStorage.setItem('myliu_userProfile_backup', JSON.stringify({ ...restoredProfile, savedAt: new Date().toISOString() }));
+          setUserProfile(restoredProfile);
+        }
+      }
+      setShowSettings(false);
+      alert('Anketos atkurtos iš atsarginės kopijos. Puslapis bus perkrautas.');
+      window.location.reload();
+    } catch (e) {
+      console.error('Error force-restoring from backup:', e);
+      alert('Nepavyko atkurti: ' + (e.message || 'klaida'));
+    }
   };
 
   const handleLogin = () => {
@@ -4486,6 +4547,13 @@ const PazintysPlatforma = () => {
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
               </label>
             </div>
+
+            <button
+              onClick={forceRestoreFromBackup}
+              className="w-full bg-amber-600 hover:bg-amber-500 text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base"
+            >
+              Atkurti anketas iš atsarginės kopijos
+            </button>
 
             <button 
               onClick={() => { setShowSettings(false); setShowChangePasswordModal(true); }}
