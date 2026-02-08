@@ -2859,19 +2859,12 @@ const PazintysPlatforma = () => {
       <div className="bg-gray-800 border-b border-gray-700 py-1 sm:py-1.5 px-1.5 sm:px-4 overflow-hidden">
         <div className="w-full mx-auto flex items-center justify-between gap-1 sm:gap-2">
           <div className="flex items-center gap-0.5 sm:gap-3 flex-shrink-0 overflow-visible">
-            <h1 className="flex items-center flex-shrink-0">
-              <img src="/logo-67x.png" alt="67X" className="h-12 md:h-14 lg:h-16 w-auto object-contain mix-blend-lighten object-center scale-[2] origin-left" />
+            <h1 className="flex items-center flex-shrink-0 bg-gray-800 rounded">
+              <img src="/logo-67x.png" alt="67X gyvenimas be ribų" className="h-10 sm:h-12 w-auto object-contain object-left mix-blend-lighten object-center" />
             </h1>
             </div>
           
-          {/* Gyvenimas be ribų - Centrinis užrašas - paslėptas mobiliesiems */}
-          <div className="hidden md:flex flex-1 justify-center">
-            <h2 className="text-2xl lg:text-4xl font-bold text-red-500">
-              Gyvenimas be ribų
-            </h2>
-          </div>
-          
-          <div className="flex items-center gap-0.5 sm:gap-2 lg:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-2 lg:gap-4 flex-shrink-0 ml-auto">
             <button
               onClick={() => {
                 setCurrentView('pokalbiai');
