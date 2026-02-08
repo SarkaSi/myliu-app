@@ -2855,27 +2855,20 @@ const PazintysPlatforma = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 p-1.5 sm:p-4">
+      {/* Header – fiksuotas aukštis; tik logo raides 2× didesnės (scale), lango aukštis nekeičiamas */}
+      <div className="bg-gray-800 border-b border-gray-700 py-1 sm:py-1.5 px-1.5 sm:px-4 overflow-hidden">
         <div className="w-full mx-auto flex items-center justify-between gap-1 sm:gap-2">
-          <div className="flex items-center gap-0.5 sm:gap-3 flex-shrink-0">
-            <h1 className="text-base sm:text-[1.8rem] font-bold text-white flex items-center gap-0.5 sm:gap-2">
-              <span>Six</span>
-              <Heart size={16} className="sm:w-7 sm:h-7 text-orange-500" fill="currentColor" />
-              <span>Seven</span>
+          <div className="flex items-center gap-0.5 sm:gap-3 flex-shrink-0 overflow-visible">
+            <h1 className="flex items-center flex-shrink-0">
+              <img src="/logo-67x.png" alt="67X" className="h-12 md:h-14 lg:h-16 w-auto object-contain mix-blend-lighten object-center scale-[2] origin-left" />
             </h1>
             </div>
           
           {/* Gyvenimas be ribų - Centrinis užrašas - paslėptas mobiliesiems */}
           <div className="hidden md:flex flex-1 justify-center">
-            <div className="relative">
-              <h2 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500 bg-clip-text text-transparent animate-pulse">
-                Gyvenimas be ribų
-              </h2>
-              {/* Dekoratyviniai elementai - simbolizuojantys laisvę ir be ribų gyvenimą */}
-              <div className="absolute -top-1 -left-2 w-2 h-2 bg-orange-400 rounded-full opacity-60 animate-ping"></div>
-              <div className="absolute -bottom-1 -right-2 w-2 h-2 bg-purple-400 rounded-full opacity-60 animate-ping" style={{ animationDelay: '0.5s' }}></div>
-          </div>
+            <h2 className="text-2xl lg:text-4xl font-bold text-red-500">
+              Gyvenimas be ribų
+            </h2>
           </div>
           
           <div className="flex items-center gap-0.5 sm:gap-2 lg:gap-4 flex-shrink-0">
