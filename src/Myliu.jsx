@@ -2729,8 +2729,6 @@ const PazintysPlatforma = () => {
         console.error('Error saving after cleanup:', e2);
       }
     }
-    
-    alert('Anketa patvirtinta! Jūsų profilis dabar matomas tarp narių.');
   };
 
   const renderStatusIcons = (status) => {
