@@ -1925,31 +1925,62 @@ const PazintysPlatforma = () => {
     }
   ]);
 
-  const [conversations, setConversations] = useState([
-    {
-      profileId: 3,
-      messages: [
-        { text: 'Labas! Kaip sekasi?', sender: 'them', time: '14:30', read: true },
-        { text: 'Labas! Viskas gerai, ačiū 😊', sender: 'me', time: '14:32', read: true },
-        { text: 'Gal susitiktume kavai?', sender: 'them', time: '14:35', read: false }
-      ],
-      lastMessageTime: new Date('2024-01-06T14:35:00')
-    },
-    {
-      profileId: 5,
-      messages: [
-        { text: 'Labas! Matau mėgsti sportą 💪', sender: 'me', time: '10:15', read: true },
-        { text: 'Taip! Sportuoju kasdien. O tu?', sender: 'them', time: '10:20', read: true }
-      ],
-      lastMessageTime: new Date('2024-01-06T10:20:00')
+  const [conversations, setConversations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('myliu_conversations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(c => ({
+            ...c,
+            lastMessageTime: c.lastMessageTime ? new Date(c.lastMessageTime) : new Date()
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Error loading conversations from localStorage:', e);
     }
-  ]);
+    return [
+      {
+        profileId: 3,
+        messages: [
+          { text: 'Labas! Kaip sekasi?', sender: 'them', time: '14:30', read: true },
+          { text: 'Labas! Viskas gerai, ačiū 😊', sender: 'me', time: '14:32', read: true },
+          { text: 'Gal susitiktume kavai?', sender: 'them', time: '14:35', read: false }
+        ],
+        lastMessageTime: new Date('2024-01-06T14:35:00')
+      },
+      {
+        profileId: 5,
+        messages: [
+          { text: 'Labas! Matau mėgsti sportą 💪', sender: 'me', time: '10:15', read: true },
+          { text: 'Taip! Sportuoju kasdien. O tu?', sender: 'them', time: '10:20', read: true }
+        ],
+        lastMessageTime: new Date('2024-01-06T10:20:00')
+      }
+    ];
+  });
 
   const [visitors, setVisitors] = useState([
     { profileId: 1, visitTime: '2 val. prieš' },
     { profileId: 4, visitTime: '5 val. prieš' },
     { profileId: 6, visitTime: 'Vakar' }
   ]);
+
+  // Išsaugoti pokalbius į localStorage – susirašinėjimas išlieka atsidarius programą kitą kartą
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    try {
+      if (!Array.isArray(conversations)) return;
+      const toSave = conversations.map(c => ({
+        ...c,
+        lastMessageTime: c.lastMessageTime instanceof Date ? c.lastMessageTime.toISOString() : (c.lastMessageTime || new Date().toISOString())
+      }));
+      localStorage.setItem('myliu_conversations', JSON.stringify(toSave));
+    } catch (e) {
+      console.error('Error saving conversations to localStorage:', e);
+    }
+  }, [conversations]);
 
   const getProfile = (id) => profiles.find(p => p.id === id) || allMembers.find(p => p.id === id);
 
@@ -2145,42 +2176,7 @@ const PazintysPlatforma = () => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     }, 50);
-
-    setTimeout(() => {
-      const replies = [
-        'Labas! 😊',
-        'Kaip laikaisi?',
-        'Smagu susipažinti!',
-        'Dėkui už žinutę!',
-        'Taip pat mėgstu ' + (getProfile(chatProfileId)?.interests[0] || 'keliones') + '!'
-      ];
-      
-      const reply = {
-        text: replies[Math.floor(Math.random() * replies.length)],
-        sender: 'them',
-        time: new Date().toLocaleTimeString('lt-LT', { hour: '2-digit', minute: '2-digit' }),
-        read: false
-      };
-
-      setConversations(prevConversations => prevConversations.map(c => {
-        if (c.profileId === chatProfileId) {
-          return {
-            ...c,
-            messages: [...c.messages, reply],
-            lastMessageTime: new Date()
-          };
-        }
-        return c;
-      }));
-      
-      // Scroll į apačią po gavimo atsakymo
-      setTimeout(() => {
-        const messagesContainer = document.getElementById('chat-messages-container');
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      }, 100);
-    }, 2000);
+    // Automatinio atsakymo nėra – atsakymą matys tik tada, kai kitas narys atsakys (reikalautų backend)
   };
 
   const buyCredits = (amount, price) => {
@@ -5068,20 +5064,20 @@ const PazintysPlatforma = () => {
                       <span className="hidden sm:inline">
                         {(() => {
                           const hasFreeMessages = (freeMessages[selectedProfile.id] || 0) > 0;
+                          const hasTrialMessages = (TRIAL_MESSAGES - totalMessagesSent) > 0;
                           const hasConversation = conversations.find(c => c.profileId === selectedProfile.id);
                           if (hasFreeMessages) return 'Siųsti (nemokama)';
-                          if (!hasConversation) return 'Siųsti';
-                          if (credits > 0) return 'Siųsti';
+                          if (hasTrialMessages || !hasConversation || credits > 0) return 'Siųsti';
                           return 'Pirkti';
                         })()}
                       </span>
                       <span className="sm:hidden">
                         {(() => {
                           const hasFreeMessages = (freeMessages[selectedProfile.id] || 0) > 0;
+                          const hasTrialMessages = (TRIAL_MESSAGES - totalMessagesSent) > 0;
                           const hasConversation = conversations.find(c => c.profileId === selectedProfile.id);
                           if (hasFreeMessages) return 'Nemokama';
-                          if (!hasConversation) return 'Siųsti';
-                          if (credits > 0) return 'Siųsti';
+                          if (hasTrialMessages || !hasConversation || credits > 0) return 'Siųsti';
                           return 'Pirkti';
                         })()}
                       </span>
@@ -5089,12 +5085,16 @@ const PazintysPlatforma = () => {
                   </div>
                   {(() => {
                     const freeMessagesCount = freeMessages[selectedProfile.id] || 0;
+                    const remainingTrial = TRIAL_MESSAGES - totalMessagesSent;
                     const hasConversation = conversations.find(c => c.profileId === selectedProfile.id);
                     if (freeMessagesCount > 0) {
                       return <p className="text-sm text-green-400 mt-2">Turite {freeMessagesCount} nemokam{freeMessagesCount === 1 ? 'ą' : freeMessagesCount < 5 ? 'as' : 'ų'} žinut{freeMessagesCount === 1 ? 'ę' : freeMessagesCount < 5 ? 'es' : 'ių'} šiam nariui!</p>;
                     }
                     if (!hasConversation) {
                       return <p className="text-sm text-gray-400 mt-2">Pirma žinutė nemokama!</p>;
+                    }
+                    if (remainingTrial > 0) {
+                      return <p className="text-sm text-green-400 mt-2">Bandomasis: liko {remainingTrial} žinučių.</p>;
                     }
                     if (credits <= 0) {
                       return <p className="text-sm text-red-500 mt-2">Neturite žinučių kreditų. Spauskite "Pirkti"!</p>;
