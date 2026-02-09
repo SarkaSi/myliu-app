@@ -2547,6 +2547,26 @@ const PazintysPlatforma = () => {
           isOnline: member.isOnline !== undefined ? member.isOnline : true
         };
         setUserProfile(restoredProfile);
+        // Sinchronizuoti registrationData su prisijungusio nario duomenimis – kad „Mano profilis“ forma rodytų to nario anketą, ne kito
+        const regData = {
+          photos: Array.isArray(member.photos) ? member.photos : [],
+          name: member.name || '',
+          gender: member.gender || '',
+          age: member.age || '',
+          city: member.city || '',
+          street: member.street || '',
+          house: member.house || '',
+          height: member.height || '175',
+          bodyType: member.bodyType || 'Vidutinis',
+          civilStatus: member.civilStatus || '',
+          hairColor: member.hairColor || '',
+          eyeColor: member.eyeColor || '',
+          bio: member.bio || '',
+          hobbies: Array.isArray(member.interests) ? member.interests : [],
+          eroticInterests: Array.isArray(member.eroticInterests) ? member.eroticInterests : []
+        };
+        setRegistrationData(regData);
+        localStorage.setItem('myliu_registrationData', JSON.stringify(regData));
         // Išsaugoti atkurtą profilį su VISOMIS duomenimis
         localStorage.setItem('myliu_userProfile', JSON.stringify(restoredProfile));
         localStorage.setItem('myliu_userProfile_backup', JSON.stringify({
